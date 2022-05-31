@@ -21,7 +21,7 @@
 package org.apache.axis2.transport.http;
 
 import org.apache.axiom.om.OMElement;
-import org.apache.axiom.om.impl.builder.StAXBuilder;
+import org.apache.axiom.om.OMXMLParserWrapper;
 import org.apache.axiom.soap.SOAP12Constants;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPFaultCode;
@@ -52,7 +52,6 @@ import org.apache.axis2.transport.http.util.RESTUtil;
 import org.apache.axis2.util.JavaUtils;
 import org.apache.axis2.util.MessageContextBuilder;
 import org.apache.axis2.util.OnDemandLogger;
-import org.apache.commons.httpclient.MultiThreadedHttpConnectionManager;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
@@ -363,7 +362,7 @@ public class AxisServlet extends HttpServlet {
             try {
                 SOAPEnvelope envelope = messageContext.getEnvelope();
                 if(envelope != null) {
-                    StAXBuilder builder = (StAXBuilder) envelope.getBuilder();
+                    OMXMLParserWrapper builder = envelope.getBuilder();
                     if (builder != null) {
                         builder.close();
                     }
@@ -393,9 +392,12 @@ public class AxisServlet extends HttpServlet {
                 String status =
                         (String) msgContext.getProperty(Constants.HTTP_RESPONSE_STATE);
                 if (status == null) {
+                    log.error("processAxisFault() found a null HTTP status from the MessageContext instance, setting HttpServletResponse status to: " + Constants.HTTP_RESPONSE_STATE);
                     res.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                 } else {
+                    log.error("processAxisFault() found an HTTP status from the MessageContext instance, setting HttpServletResponse status to: " + status);
                     res.setStatus(Integer.parseInt(status));
+                    return;
                 }
 
                 AxisBindingOperation axisBindingOperation =
@@ -564,7 +566,11 @@ public class AxisServlet extends HttpServlet {
                 && HTTPTransportConstants.HTTP_CLIENT_4_X_VERSION.equals(clientVersion)) {
             // TODO - Handle for HTTPClient 4
         } else {
-            MultiThreadedHttpConnectionManager.shutdownAll();
+            try {
+                Class.forName("org.apache.commons.httpclient.MultiThreadedHttpConnectionManager").getMethod("shutdownAll").invoke(null);
+            } catch (Exception ex) {
+                log.warn("Failed to shut down MultiThreadedHttpConnectionManager", ex);
+            }
         }
 
     }

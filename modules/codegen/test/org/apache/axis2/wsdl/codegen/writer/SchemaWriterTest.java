@@ -23,29 +23,19 @@ import java.io.File;
 
 import org.apache.axis2.wsdl.codegen.XMLSchemaTest;
 import org.apache.ws.commons.schema.XmlSchema;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 public class SchemaWriterTest extends XMLSchemaTest{
-    private SchemaWriter writer;
-    
-
-    @Override
-    protected void setUp() throws Exception {
-        writer=new SchemaWriter(new File(customDirectoryLocation));
-        super.setUp();
-    }
-
-    @Override
-    protected void tearDown() throws Exception {
-        writer=null;
-        super.tearDown();
-    }
+    @TempDir
+    File tmpFolder;
 
     @Test
     public void testWriteSchema() throws Exception{
+        SchemaWriter writer = new SchemaWriter(tmpFolder);
         XmlSchema schema=loadSingleSchemaFile(1);
         writer.writeSchema(schema, "generated.xsd");
-        String s1=readXMLfromSchemaFile(customDirectoryLocation+"generated.xsd");
+        String s1=readXMLfromSchemaFile(new File(tmpFolder, "generated.xsd").getPath());
         String s2=readXMLfromSchemaFile(customDirectoryLocation+"sampleSchema1.xsd");
         assertSimilarXML(s1, s2);
         

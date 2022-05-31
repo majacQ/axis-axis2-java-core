@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.xml.namespace.QName;
+import javax.xml.soap.Node;
 import javax.xml.soap.SOAPElement;
 import javax.xml.soap.SOAPEnvelope;
 import javax.xml.soap.SOAPFactory;
@@ -42,8 +43,7 @@ import javax.xml.ws.WebServiceException;
 import junit.framework.TestCase;
 
 import org.apache.axiom.om.OMElement;
-import org.apache.axiom.om.impl.llom.OMSourcedElementImpl;
-import org.apache.axiom.soap.impl.llom.soap11.SOAP11HeaderImpl;
+import org.apache.axiom.om.OMSourcedElement;
 import org.apache.axis2.Constants;
 import org.apache.axis2.jaxws.core.MessageContext;
 import org.apache.axis2.jaxws.handler.LogicalMessageImpl;
@@ -644,11 +644,11 @@ public class SOAPHeadersAdapterTests extends TestCase {
         
         // confirm headers are there
         SOAPHeader soapHeader = soapMessage.getSOAPHeader();
-        Iterator<SOAPHeaderElement> it = soapHeader.getChildElements();
+        Iterator<Node> it = soapHeader.getChildElements();
         // TODO: not sure if the order of the header additions is or should be preserved.
         // in other words, this test may be a little too strict.
-        SOAPHeaderElement headerElem1 = it.next();
-        SOAPHeaderElement headerElem2 = it.next();
+        SOAPHeaderElement headerElem1 = (SOAPHeaderElement)it.next();
+        SOAPHeaderElement headerElem2 = (SOAPHeaderElement)it.next();
         // should only be two header elements, so...
         assertFalse(it.hasNext());
         
@@ -704,11 +704,11 @@ public class SOAPHeadersAdapterTests extends TestCase {
         
         // confirm headers are there
         SOAPHeader soapHeader = soapEnvelope.getHeader();
-        Iterator<SOAPHeaderElement> it = soapHeader.getChildElements();
+        Iterator<Node> it = soapHeader.getChildElements();
         // TODO: not sure if the order of the header additions is or should be preserved.
         // in other words, this test may be a little too strict.
-        SOAPHeaderElement headerElem1 = it.next();
-        SOAPHeaderElement headerElem2 = it.next();
+        SOAPHeaderElement headerElem1 = (SOAPHeaderElement)it.next();
+        SOAPHeaderElement headerElem2 = (SOAPHeaderElement)it.next();
         // should only be two header elements, so...
         assertFalse(it.hasNext());
         
@@ -760,16 +760,16 @@ public class SOAPHeadersAdapterTests extends TestCase {
         adapter.put(ACOH1_HEADER_QNAME, acoh1ContentList);
         
         // get message object and convert to SOAPEnvelope
-        OMElement omEnvelope = messageContext.getMessage().getAsOMElement();
+        org.apache.axiom.soap.SOAPEnvelope omEnvelope = (org.apache.axiom.soap.SOAPEnvelope)messageContext.getMessage().getAsOMElement();
         
-        // confirm headers are there.  I can cast here only because I know the implementation.  :)
-        SOAP11HeaderImpl omHeader = (SOAP11HeaderImpl)omEnvelope.getChildElements().next();
+        // confirm headers are there.
+        org.apache.axiom.soap.SOAPHeader omHeader = omEnvelope.getHeader();
 
-        Iterator<OMSourcedElementImpl> it = omHeader.getChildElements();
+        Iterator<OMElement> it = omHeader.getChildElements();
         // TODO: not sure if the order of the header additions is or should be preserved.
         // in other words, this test may be a little too strict.
-        OMSourcedElementImpl headerElem1 = it.next();
-        OMSourcedElementImpl headerElem2 = it.next();
+        OMSourcedElement headerElem1 = (OMSourcedElement)it.next();
+        OMSourcedElement headerElem2 = (OMSourcedElement)it.next();
         // should only be two header elements, so...
         assertFalse(it.hasNext());
         
@@ -821,16 +821,16 @@ public class SOAPHeadersAdapterTests extends TestCase {
         adapter.put(ACOH1_HEADER_QNAME, acoh1ContentList);
         
         // get message object and convert to SOAPEnvelope
-        OMElement omEnvelope = messageContext.getMessage().getAsOMElement();
+        org.apache.axiom.soap.SOAPEnvelope omEnvelope = (org.apache.axiom.soap.SOAPEnvelope)messageContext.getMessage().getAsOMElement();
         
-        // confirm headers are there.  I can cast here only because I know the implementation.  :)
-        SOAP11HeaderImpl omHeader = (SOAP11HeaderImpl)omEnvelope.getChildElements().next();
+        // confirm headers are there.
+        org.apache.axiom.soap.SOAPHeader omHeader = omEnvelope.getHeader();
 
-        Iterator<OMSourcedElementImpl> it = omHeader.getChildElements();
+        Iterator<OMElement> it = omHeader.getChildElements();
         // TODO: not sure if the order of the header additions is or should be preserved.
         // in other words, this test may be a little too strict.
-        OMSourcedElementImpl headerElem1 = it.next();
-        OMSourcedElementImpl headerElem2 = it.next();
+        OMSourcedElement headerElem1 = (OMSourcedElement)it.next();
+        OMSourcedElement headerElem2 = (OMSourcedElement)it.next();
         // should only be two header elements, so...
         assertFalse(it.hasNext());
         
@@ -890,16 +890,16 @@ public class SOAPHeadersAdapterTests extends TestCase {
         payload.toString();
         
         // get message object and convert to SOAPEnvelope
-        OMElement omEnvelope = messageContext.getMessage().getAsOMElement();
+        org.apache.axiom.soap.SOAPEnvelope omEnvelope = (org.apache.axiom.soap.SOAPEnvelope)messageContext.getMessage().getAsOMElement();
         
-        // confirm headers are there.  I can cast here only because I know the implementation.  :)
-        SOAP11HeaderImpl omHeader = (SOAP11HeaderImpl)omEnvelope.getChildElements().next();
+        // confirm headers are there.
+        org.apache.axiom.soap.SOAPHeader omHeader = omEnvelope.getHeader();
 
-        Iterator<OMSourcedElementImpl> it = omHeader.getChildElements();
+        Iterator<OMElement> it = omHeader.getChildElements();
         // TODO: not sure if the order of the header additions is or should be preserved.
         // in other words, this test may be a little too strict.
-        OMSourcedElementImpl headerElem1 = it.next();
-        OMSourcedElementImpl headerElem2 = it.next();
+        OMSourcedElement headerElem1 = (OMSourcedElement)it.next();
+        OMSourcedElement headerElem2 = (OMSourcedElement)it.next();
         // should only be two header elements, so...
         assertFalse(it.hasNext());
         

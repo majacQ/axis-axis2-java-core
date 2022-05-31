@@ -21,7 +21,6 @@ package org.apache.axis2.context;
 
 import org.apache.axiom.attachments.Attachments;
 import org.apache.axiom.om.OMOutputFormat;
-import org.apache.axiom.om.util.DetachableInputStream;
 import org.apache.axiom.soap.SOAP11Constants;
 import org.apache.axiom.soap.SOAP12Constants;
 import org.apache.axiom.soap.SOAPEnvelope;
@@ -1221,24 +1220,6 @@ public class MessageContext extends AbstractContext
     }
 
     /**
-     * @return inbound content length of 0
-     */
-    public long getInboundContentLength() throws IOException {
-        // If there is an attachment map, the Attachments keep track
-        // of the inbound content length.
-        if (attachments != null) {
-//            return attachments.getContentLength();
-        }
-
-        // Otherwise the length is accumulated by the DetachableInputStream.
-        DetachableInputStream dis =
-            (DetachableInputStream) getProperty(Constants.DETACHABLE_INPUT_STREAM);
-        if (dis != null) {
-            return dis.length();
-        }
-        return 0;
-    }
-    /**
      * @return Returns boolean.
      */
     public boolean isServerSide() {
@@ -1774,12 +1755,16 @@ public class MessageContext extends AbstractContext
      * @return attachment
      */
     public Attachments getAttachmentMap() {
-        if (attachments == null) {
+        return getAttachmentMap(true);
+    }
+
+    public Attachments getAttachmentMap(boolean create) {
+        if (attachments == null && create) {
             attachments = new Attachments();
         }
         return attachments;
     }
-
+    
     /**
      * Adds an attachment to the attachment Map of this message context. This
      * attachment gets serialised as a MIME attachment when sending the message
@@ -4301,6 +4286,16 @@ public class MessageContext extends AbstractContext
     }
 
     public boolean isFault() {
+	if (getEnvelope() == null) {
+	    // AXIS2-5943 , the basic assumption that the Axis2 architecture makes 
+	    // is that any payload always has some form of SOAP representation and 
+	    // the envelope should therefore never be null.
+	    // In the HTTP Response of JSON based REST services, the axisOperation
+	    // is null so no envelope is created
+            log.debug(getLogIDString() + ", " + myClassName +
+                    " , isFault() found a null soap envelope, returning false. This can happen in REST HTTP responses. ");
+            return false;
+        }
         return getEnvelope().hasFault();
     }
 

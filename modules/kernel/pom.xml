@@ -19,18 +19,30 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>axis2</artifactId>
-        <version>1.7.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
+
     <artifactId>axis2-kernel</artifactId>
+
     <name>Apache Axis2 - Kernel</name>
     <description>Core Parts of Axis2. This includes Axis2 engine, Client API, Addressing support, etc.,
     </description>
+    <url>http://axis.apache.org/axis2/java/core/</url>
+
+    <scm>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=axis-axis2-java-core.git;a=summary</url>
+        <tag>HEAD</tag>
+    </scm>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.ws.commons.axiom</groupId>
@@ -45,13 +57,13 @@
             <groupId>org.apache.geronimo.specs</groupId>
             <artifactId>geronimo-ws-metadata_2.0_spec</artifactId>
         </dependency>
-	  <dependency>
-            <groupId>org.apache.geronimo.specs</groupId>
-            <artifactId>geronimo-jta_1.1_spec</artifactId>
+        <dependency>
+            <groupId>javax.transaction</groupId>
+            <artifactId>javax.transaction-api</artifactId>
         </dependency>
         <dependency>
             <groupId>javax.servlet</groupId>
-            <artifactId>servlet-api</artifactId>
+            <artifactId>javax.servlet-api</artifactId>
         </dependency>
         <dependency>
             <groupId>commons-fileupload</groupId>
@@ -83,39 +95,54 @@
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>           
+            <artifactId>commons-io</artifactId>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
-	    <dependency>
-	        <groupId>xmlunit</groupId>
-	        <artifactId>xmlunit</artifactId>
-            <scope>test</scope>
-	    </dependency>
         <dependency>
-            <groupId>org.apache.geronimo.specs</groupId>
-            <artifactId>geronimo-javamail_1.4_spec</artifactId>
+            <groupId>org.xmlunit</groupId>
+            <artifactId>xmlunit-legacy</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.ws.commons.axiom</groupId>
+            <artifactId>axiom-truth</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>jakarta.mail</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.activation</groupId>
+            <artifactId>jakarta.activation</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
-    <url>http://axis.apache.org/axis2/java/core/</url>
-    <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/kernel</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/kernel</developerConnection>
-        <url>http://svn.apache.org/viewvc/axis/axis2/java/core/trunk/modules/kernel</url>
-    </scm>
+
     <build>
         <sourceDirectory>src</sourceDirectory>
         <testSourceDirectory>test</testSourceDirectory>
         <resources>
             <resource>
                 <directory>conf</directory>
-                <excludes>
-                    <exclude>**/*.properties</exclude>
-                </excludes>
+                <includes>
+                    <include>axis2.xml</include>
+                </includes>
                 <filtering>false</filtering>
             </resource>
             <resource>
@@ -169,14 +196,14 @@
                         <id>process-resources</id>
                         <phase>process-resources</phase>
                         <configuration>
-                            <tasks>
+                            <target>
                                 <tstamp>
                                     <format property="build.time" pattern="MMM dd, yyyy (hh:mm:ss z)" locale="en" />
                                 </tstamp>
                                 <filter token="axisVersion" value="${project.version}" />
                                 <filter token="TODAY" value="${build.time}" />
                                 <copy toDir="${basedir}/target/classes/org/apache/axis2/i18n" overwrite="true" filtering="on" file="${basedir}/src/org/apache/axis2/i18n/resource.properties" />
-                            </tasks>
+                            </target>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -186,7 +213,7 @@
                         <id>process-test-resources</id>
                         <phase>process-test-resources</phase>
                         <configuration>
-                            <tasks unless="maven.test.skip">
+                            <target unless="maven.test.skip">
                                 <copy todir="${project.build.directory}/test-resources">
                                     <fileset dir="${basedir}/test-resources" />
                                 </copy>
@@ -196,7 +223,7 @@
                                 <ant antfile="build.xml" inheritall="true" inheritrefs="true" dir="test-resources/deployment/module1" />
                                 <ant antfile="build.xml" inheritall="true" inheritrefs="true" dir="test-resources/deployment/serviceModule" />
                                 <copy file="${basedir}/test-resources/deployment/axis2.xml" tofile="${basedir}/target/test-resources/deployment/axis2.xml" />
-                            </tasks>
+                            </target>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -206,10 +233,10 @@
                         <id>test-compile</id>
                         <phase>test-compile</phase>
                         <configuration>
-                            <tasks unless="maven.test.skip">
+                            <target unless="maven.test.skip">
                                 <property name="maven.build.dir" location="${basedir}/target" />
                                 <ant antfile="j2secbuild.xml" inheritall="true" inheritrefs="true" dir="test-resources/" />
-                            </tasks>
+                            </target>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -232,6 +259,7 @@
                             </descriptors>
                             <finalName>test-zip</finalName>
                             <appendAssemblyId>false</appendAssemblyId>
+                            <attach>false</attach>
                         </configuration>
                     </execution>
                 </executions>

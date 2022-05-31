@@ -38,14 +38,14 @@
                  javax.xml.stream.XMLStreamException"
          session="false" %>
 <head>
-    <jsp:include page="include/httpbase.jsp"/>
+    <jsp:include page="/WEB-INF/include/httpbase.jsp"/>
     <title>Axis2 Happiness Page</title>
     <link href="axis2-web/css/axis-style.css" rel="stylesheet" type="text/css">
 </head>
 
 <body>
-<jsp:include page="include/header.inc"/>
-<jsp:include page="include/link-footer.jsp"/>
+<jsp:include page="/WEB-INF/include/header.inc"/>
+<jsp:include page="/WEB-INF/include/link-footer.jsp"/>
 <%IP = request.getRequestURL().toString();%>
 <%!
     /*
@@ -383,10 +383,10 @@
      * the essentials, without these Axis is not going to work
      */
     needed = needClass(out, "org.apache.axis2.transport.http.AxisServlet",
-            "axis2-1.0.jar",
+            "fatal error",
             "Apache-Axis",
             "Axis2 will not work",
-            "http://xml.apache.org/axis2/");
+            "https://axis.apache.org/axis2");
     needed += needClass(out, "org.apache.commons.logging.Log",
             "commons-logging.jar",
             "Jakarta-Commons Logging",
@@ -502,7 +502,7 @@
     }
 %>
 
-<jsp:include page="include/footer.inc"/>
+<jsp:include page="/WEB-INF/include/footer.inc"/>
 </body>
 </html>
 

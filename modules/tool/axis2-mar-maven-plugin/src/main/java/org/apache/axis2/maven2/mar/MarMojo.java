@@ -23,6 +23,7 @@ import org.apache.maven.archiver.MavenArchiveConfiguration;
 import org.apache.maven.archiver.MavenArchiver;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProjectHelper;
 import org.codehaus.plexus.archiver.ArchiverException;
@@ -38,13 +39,23 @@ import java.io.IOException;
  * @goal mar
  * @phase package
  * @requiresDependencyResolution runtime
+ * @threadSafe
  */
 public class MarMojo extends AbstractMarMojo
 {
     /**
+     * The Maven Session
+     *
+     * @required
+     * @readonly
+     * @parameter property="session"
+     */
+    private MavenSession session;
+    
+    /**
      * The directory for the generated mar.
      * 
-     * @parameter expression="${project.build.directory}"
+     * @parameter default-value="${project.build.directory}"
      * @required
      */
     private String outputDirectory;
@@ -52,7 +63,7 @@ public class MarMojo extends AbstractMarMojo
     /**
      * The name of the generated mar.
      * 
-     * @parameter expression="${project.build.finalName}"
+     * @parameter default-value="${project.build.finalName}"
      * @required
      */
     private String marName;
@@ -83,7 +94,7 @@ public class MarMojo extends AbstractMarMojo
      * Whether this is the main artifact being built. Set to <code>false</code> if you don't want to install or deploy
      * it to the local repository instead of the default one in an execution.
      * 
-     * @parameter expression="${primaryArtifact}" default-value="true"
+     * @parameter default-value="true"
      */
     private boolean primaryArtifact;
 
@@ -138,7 +149,7 @@ public class MarMojo extends AbstractMarMojo
         jarArchiver.addDirectory( marDirectory );
 
         // create archive
-        archiver.createArchive( project, archive );
+        archiver.createArchive(session, project, archive);
 
         if ( classifier != null )
         {

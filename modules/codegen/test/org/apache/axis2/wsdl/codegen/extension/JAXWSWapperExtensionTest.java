@@ -20,9 +20,9 @@
 
 package org.apache.axis2.wsdl.codegen.extension;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 import javax.xml.namespace.QName;
 
@@ -35,11 +35,12 @@ import org.apache.axis2.context.ServiceContext;
 import org.apache.axis2.description.AxisMessage;
 import org.apache.axis2.description.AxisOperation;
 import org.apache.axis2.description.AxisService;
-import org.apache.axis2.util.CommandLineOption;
 import org.apache.axis2.wsdl.codegen.CodeGenConfiguration;
 import org.apache.axis2.wsdl.codegen.XMLSchemaTest;
 import org.apache.ws.commons.schema.XmlSchema;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class JAXWSWapperExtensionTest extends XMLSchemaTest {
     private AxisMessage axisMessage;
@@ -47,8 +48,8 @@ public class JAXWSWapperExtensionTest extends XMLSchemaTest {
     private ArrayList<XmlSchema> schemas;
     private AxisOperation axisOperation;
 
-    @Override
-    public void setUp() throws Exception {
+    @BeforeEach
+    void setUp() throws Exception {
         service = new AxisService();
         schemas = new ArrayList<XmlSchema>();
         loadSampleSchemaFile(schemas);
@@ -125,16 +126,14 @@ public class JAXWSWapperExtensionTest extends XMLSchemaTest {
       
         axisMessage.setParent(axisOperation);
         axisMessage.setElementQName(new QName("http://www.w3schools.com", "note"));
-        super.setUp();
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @AfterEach
+    void tearDown() throws Exception {
         axisMessage = null;
         service = null;
         schemas = null;
         axisOperation=null;
-        super.tearDown();
     }
 
     @Test
@@ -144,8 +143,7 @@ public class JAXWSWapperExtensionTest extends XMLSchemaTest {
         axisOperation.addMessage(axisMessage, "test_message");
         service.addOperation(axisOperation);
         JAXWSWapperExtension extension = new JAXWSWapperExtension();
-        Map<String, CommandLineOption> optionMap = new HashMap<String, CommandLineOption>();
-        CodeGenConfiguration configuration = new CodeGenConfiguration(optionMap);
+        CodeGenConfiguration configuration = new CodeGenConfiguration();
         configuration.setOutputLanguage("jax-ws");
         configuration.setParametersWrapped(false);
         configuration.addAxisService(service);
@@ -156,8 +154,7 @@ public class JAXWSWapperExtensionTest extends XMLSchemaTest {
     @Test
     public void  testWalkSchema() throws Exception{
         JAXWSWapperExtension extension = new JAXWSWapperExtension();
-        Map<String, CommandLineOption> optionMap = new HashMap<String, CommandLineOption>();
-        CodeGenConfiguration configuration = new CodeGenConfiguration(optionMap);
+        CodeGenConfiguration configuration = new CodeGenConfiguration();
         configuration.setOutputLanguage("jax-ws");
         configuration.setParametersWrapped(false);
         configuration.addAxisService(service);        

@@ -23,8 +23,10 @@ import junit.framework.TestCase;
 import org.apache.axis2.util.CommandLineOption;
 import org.apache.axis2.util.CommandLineOptionConstants;
 import org.apache.axis2.util.CommandLineOptionParser;
+import org.apache.axis2.wsdl.codegen.CodeGenConfiguration;
 import org.apache.axis2.wsdl.codegen.CodeGenerationEngine;
 import org.apache.axis2.wsdl.codegen.CodeGenerationException;
+import org.apache.axis2.wsdl.codegen.CodegenConfigLoader;
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.Target;
 import org.apache.tools.ant.taskdefs.Javac;
@@ -46,8 +48,6 @@ public abstract class WSDL2JavaSuccessTestBase extends TestCase {
             System.getProperty("basedir", ".") + "/test-resources/";
     public static final String CLASSES_DIR =
             System.getProperty("basedir", ".") + "/target/classes/";
-    private String[] moduleNames = { "xml", "common", "core" };
-    private static final String MODULE_PATH_PREFIX = "../modules/";
     private static final String COMPILE_TARGET_NAME = "compile";
 
     protected String wsdlFileName;
@@ -169,7 +169,9 @@ public abstract class WSDL2JavaSuccessTestBase extends TestCase {
         Map optionMap = fillOptionMap(wsdlFile, outputLocation);
         CommandLineOptionParser parser =
                 new CommandLineOptionParser(optionMap);
-        new CodeGenerationEngine(parser).generate();
+        CodeGenConfiguration config = new CodeGenConfiguration();
+        CodegenConfigLoader.loadConfig(config, parser.getAllOptions());
+        new CodeGenerationEngine(config).generate();
     }
 
     /** @param outputLocation  */
@@ -211,10 +213,6 @@ public abstract class WSDL2JavaSuccessTestBase extends TestCase {
         File outputLocationFile = new File(outputLocation);
         Path classPath = new Path(codeGenProject, outputLocation);
         classPath.addExisting(classPath.concatSystemClasspath(), false);
-        for (int i = 0; i < moduleNames.length; i++) {
-            classPath.add(new Path(codeGenProject,
-                                   MODULE_PATH_PREFIX + moduleNames[i] + CLASSES_DIR));
-        }
 
         classPath.add(new Path(codeGenProject, cp));
 

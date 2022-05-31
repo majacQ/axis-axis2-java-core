@@ -60,20 +60,15 @@ public class OSGiTest {
                 url("link:classpath:META-INF/links/org.osgi.compendium.link"),
                 url("link:classpath:org.apache.felix.configadmin.link"),
                 url("link:classpath:org.apache.servicemix.bundles.wsdl4j.link"),
-                url("link:classpath:org.apache.geronimo.specs.geronimo-activation_1.1_spec.link"), // TODO: should not be necessary on Java 6
-                url("link:classpath:org.apache.geronimo.specs.geronimo-jms_1.1_spec.link"), // TODO: why the heck is this required???
                 url("link:classpath:org.apache.geronimo.specs.geronimo-ws-metadata_2.0_spec.link"),
-                url("link:classpath:org.apache.geronimo.specs.geronimo-javamail_1.4_spec.link"), // TODO: should no longer be necessary
+                url("link:classpath:com.sun.activation.jakarta.activation.link"),
+                url("link:classpath:com.sun.mail.jakarta.mail.link"), // TODO: should no longer be necessary
                 url("link:classpath:org.apache.geronimo.specs.geronimo-servlet_2.5_spec.link"),
-                url("link:classpath:org.apache.geronimo.specs.geronimo-jaxrs_1.1_spec.link"), // TODO: shouldn't this be optional???
-                url("link:classpath:org.apache.servicemix.specs.stax-api-1.0.link"),
-                url("link:classpath:stax2-api.link"),
-                url("link:classpath:woodstox-core-asl.link"),
                 url("link:classpath:org.apache.james.apache-mime4j-core.link"),
                 url("link:classpath:org.apache.ws.commons.axiom.axiom-api.link"),
                 url("link:classpath:org.apache.ws.commons.axiom.axiom-impl.link"),
-                url("link:classpath:org.apache.commons.fileupload.link"),
-                url("link:classpath:org.apache.commons.io.link"),
+                url("link:classpath:org.apache.commons.commons-fileupload.link"),
+                url("link:classpath:org.apache.commons.commons-io.link"),
                 url("link:classpath:org.apache.servicemix.bundles.commons-httpclient.link"), // TODO: still necessary???
                 url("link:classpath:org.apache.servicemix.bundles.commons-codec.link"), // TODO: still necessary???
                 url("link:classpath:org.apache.httpcomponents.httpcore.link"),

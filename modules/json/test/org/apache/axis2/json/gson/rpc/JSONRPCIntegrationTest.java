@@ -19,33 +19,22 @@
 
 package org.apache.axis2.json.gson.rpc;
 
-import junit.framework.Assert;
 import org.apache.axis2.json.gson.UtilTest;
-import org.apache.axis2.testutils.UtilServer;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.apache.axis2.testutils.Axis2Server;
+import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 public class JSONRPCIntegrationTest {
-    String contentType = "application/json";
-    String charSet = "UTF-8";
-
-    @BeforeClass
-    public static void startTestServer() throws Exception {
-        UtilServer.start("test-repository/gson", "test-repository/gson/axis2.xml");
-    }
-
-    @AfterClass
-    public static void stopTestServer() throws Exception {
-        UtilServer.stop();
-    }
-
+    @ClassRule
+    public static Axis2Server server = new Axis2Server("target/repo/gson");
+    
     @Test
     public void testJsonRpcMessageReceiver() throws Exception {
         String jsonRequest = "{\"echoPerson\":[{\"arg0\":{\"name\":\"Simon\",\"age\":\"35\",\"gender\":\"male\"}}]}";
-        String echoPersonUrl = "http://localhost:" + UtilServer.TESTING_PORT +"/axis2/services/JSONPOJOService/echoPerson";
+        String echoPersonUrl = server.getEndpoint("JSONPOJOService") + "echoPerson";
         String expectedResponse = "{\"response\":{\"name\":\"Simon\",\"age\":\"35\",\"gender\":\"male\"}}";
-        String response = UtilTest.post(jsonRequest, echoPersonUrl, contentType, charSet);
+        String response = UtilTest.post(jsonRequest, echoPersonUrl);
         Assert.assertNotNull(response);
         Assert.assertEquals(expectedResponse , response);
     }
@@ -53,8 +42,8 @@ public class JSONRPCIntegrationTest {
     @Test
     public void testJsonInOnlyRPCMessageReceiver() throws Exception {
         String jsonRequest = "{\"ping\":[{\"arg0\":{\"name\":\"Simon\",\"age\":\"35\",\"gender\":\"male\"}}]}";
-        String echoPersonUrl = "http://localhost:" + UtilServer.TESTING_PORT +"/axis2/services/JSONPOJOService/ping";
-        String response = UtilTest.post(jsonRequest, echoPersonUrl, contentType, charSet);
+        String echoPersonUrl = server.getEndpoint("JSONPOJOService") + "ping";
+        String response = UtilTest.post(jsonRequest, echoPersonUrl);
         Assert.assertEquals("", response);
     }
 }

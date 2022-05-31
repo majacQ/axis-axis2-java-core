@@ -30,7 +30,6 @@ import org.codehaus.plexus.util.FileUtils;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -46,7 +45,7 @@ public abstract class AbstractMarMojo
     /**
      * The projects base directory.
      *
-     * @parameter expression="${project.basedir}"
+     * @parameter property="project.basedir"
      * @required
      * @readonly
      */
@@ -55,7 +54,7 @@ public abstract class AbstractMarMojo
     /**
      * The maven project.
      *
-     * @parameter expression="${project}"
+     * @parameter property="project"
      * @required
      * @readonly
      */
@@ -64,7 +63,7 @@ public abstract class AbstractMarMojo
     /**
      * The directory containing generated classes.
      *
-     * @parameter expression="${project.build.outputDirectory}"
+     * @parameter property="project.build.outputDirectory"
      * @required
      */
     private File classesDirectory;
@@ -72,7 +71,7 @@ public abstract class AbstractMarMojo
     /**
      * The directory where the mar is built.
      *
-     * @parameter expression="${project.build.directory}/mar"
+     * @parameter default-value="${project.build.directory}/mar"
      * @required
      */
     protected File marDirectory;
@@ -96,7 +95,7 @@ public abstract class AbstractMarMojo
     /**
      * Whether the dependency jars should be included in the mar
      * 
-     * @parameter expression="${includeDependencies}" default-value="true"
+     * @parameter default-value="true"
      */
     private boolean includeDependencies;
     
@@ -136,13 +135,12 @@ public abstract class AbstractMarMojo
             copyMetaInfFile( moduleXmlFile, moduleFileTarget, existsBeforeCopyingClasses, "module.xml file" );
 
             if(includeDependencies){
-                Set artifacts = project.getArtifacts();
+                Set<Artifact> artifacts = project.getArtifacts();
     
-                List duplicates = findDuplicates( artifacts );
+                List<String> duplicates = findDuplicates( artifacts );
     
-                for ( Iterator iter = artifacts.iterator(); iter.hasNext(); )
+                for (Artifact artifact : artifacts)
                 {
-                	Artifact artifact = (Artifact) iter.next();
                 	String targetFileName = getDefaultFinalName( artifact );
     
                 	getLog().debug( "Processing: " + targetFileName );
@@ -179,13 +177,12 @@ public abstract class AbstractMarMojo
      * @param artifacts set of artifacts
      * @return List of duplicated artifacts
      */
-    private List findDuplicates( Set artifacts )
+    private List<String> findDuplicates( Set<Artifact> artifacts )
     {
-        List duplicates = new ArrayList();
-        List identifiers = new ArrayList();
-        for ( Iterator iter = artifacts.iterator(); iter.hasNext(); )
+        List<String> duplicates = new ArrayList<String>();
+        List<String> identifiers = new ArrayList<String>();
+        for (Artifact artifact : artifacts)
         {
-            Artifact artifact = (Artifact) iter.next();
             String candidate = getDefaultFinalName( artifact );
             if ( identifiers.contains( candidate ) )
             {

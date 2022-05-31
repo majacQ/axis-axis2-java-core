@@ -882,12 +882,6 @@ public class JavaBeanWriter implements BeanWriter {
                 XSLTUtils.addAttribute(model, "innerchoice", "yes", property);
             }
             
-            if (metainf.isFixed()){
-                XSLTUtils.addAttribute(model, "fixed", "yes", property);
-            }
-
-
-
             if ((parentMetaInf != null) && metainf.isRestriction() && missingQNames.contains(name)) {
                 // this element details should be there with the parent meta Inf
                 addAttributesToProperty(
@@ -935,6 +929,10 @@ public class JavaBeanWriter implements BeanWriter {
 
         if (metainf.isNillable(name)) {
             XSLTUtils.addAttribute(model, "nillable", "yes", property);
+        }
+
+        if (metainf.isFixed(name)){
+            XSLTUtils.addAttribute(model, "fixed", "yes", property);
         }
 
         if (metainf.getOptionalAttributeStatusForQName(name)) {
@@ -1069,7 +1067,7 @@ public class JavaBeanWriter implements BeanWriter {
                 }
             }else{
                 if(metainf.getMinLengthFacet()!=-1){
-                    XSLTUtils.addAttribute(model, "maxLenFacet", Long.MAX_VALUE + "", property);
+                    XSLTUtils.addAttribute(model, "maxLenFacet", Long.MAX_VALUE + "L", property);
                 }
             }
         }

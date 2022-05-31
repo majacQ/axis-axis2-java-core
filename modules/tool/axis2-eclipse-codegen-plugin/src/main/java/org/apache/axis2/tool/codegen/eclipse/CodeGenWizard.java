@@ -35,10 +35,9 @@ import org.apache.axis2.tool.codegen.eclipse.ui.WSDLFileSelectionPage;
 import org.apache.axis2.tool.codegen.eclipse.util.SettingsConstants;
 import org.apache.axis2.tool.codegen.eclipse.util.UIConstants;
 import org.apache.axis2.tool.codegen.eclipse.util.WSDLPropertyReader;
-import org.apache.axis2.tool.core.JarFileWriter;
-import org.apache.axis2.tool.core.SrcCompiler;
 import org.apache.axis2.wsdl.codegen.CodeGenConfiguration;
 import org.apache.axis2.wsdl.codegen.CodeGenerationEngine;
+import org.apache.axis2.wsdl.codegen.CodegenConfigLoader;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -267,7 +266,8 @@ public class CodeGenWizard extends Wizard implements INewWizard, Java2WSDLConsta
 
                  //Fix for the CodeGenConfiguration Contructor Change
                  //CodeGenConfiguration codegenConfig = new CodeGenConfiguration(service, optionsMap);
-                 CodeGenConfiguration codegenConfig = new CodeGenConfiguration(optionsMap);
+                 CodeGenConfiguration codegenConfig = new CodeGenConfiguration();
+                 CodegenConfigLoader.loadConfig(codegenConfig, optionsMap);
                  codegenConfig.addAxisService(service);
                  
                  //set the wsdl definision for codegen config for skeleton generarion.

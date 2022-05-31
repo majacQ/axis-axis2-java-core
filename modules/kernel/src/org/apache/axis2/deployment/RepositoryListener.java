@@ -135,7 +135,7 @@ public class RepositoryListener implements DeploymentConstants {
                         int idx = path.lastIndexOf("!/");
                         if (idx != -1 && path.substring(idx+2).equals("META-INF/module.xml")) {
                             moduleURI = new URI(path.substring(0, idx).replaceAll(" ", "%20"));
-                            if (!moduleURI.getScheme().equals("file")) {
+                            if (!"file".equals(moduleURI.getScheme())) {
                                 continue;
                             }
                         } else {
@@ -167,7 +167,13 @@ public class RepositoryListener implements DeploymentConstants {
             classPath = ".";
         }
         File root = new File(classPath);
-        File[] files = root.listFiles();
+        File[] files;
+        try {
+            files = root.listFiles();
+        } catch (SecurityException ex) {
+            // Ignore
+            files = null;
+        }
         if (files != null) {
             for (int i = 0; i < files.length; i++) {
                 File file = files[i];

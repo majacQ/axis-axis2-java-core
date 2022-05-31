@@ -55,7 +55,6 @@ import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamReader;
 
 import org.apache.axiom.om.*;
-import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.classloader.BeanInfoCache;
@@ -355,7 +354,7 @@ public class BeanUtil {
                 }else {
                     addTypeQname(elemntNameSpace, propertyQnameValueList, property,
                                  beanName, processingDocLitBare);
-                    if (Object.class.equals(ptype)) {
+                    if (Object.class.equals(ptype) && value != null) {
                         //this is required to match this element prefix as
                         //root element's prefix.
                         QName qNamefortheType = (QName) typeTable
@@ -1216,7 +1215,7 @@ public class BeanUtil {
                         } else {
                             wrappingElement = fac.createOMElement(partName, null);
                         }
-                        OMText text = fac.createOMText(arg, true);
+                        OMText text = fac.createOMText((DataHandler)arg, true);
                         wrappingElement.addChild(text);
                         objects.add(wrappingElement);
                     }else if (SimpleTypeMapper.isEnum(arg.getClass())) {
@@ -1510,10 +1509,9 @@ public class BeanUtil {
                         entryQName, properties.toArray(), null,
                         typeTable, elementFormDefault);
 
-                StAXOMBuilder stAXOMBuilder = new StAXOMBuilder(
-                        OMAbstractFactory.getOMFactory(), new StreamWrapper(
-                                pullParser));
-                omEntry = stAXOMBuilder.getDocumentElement();
+                OMXMLParserWrapper builder = OMXMLBuilderFactory.createStAXOMBuilder(
+                        new StreamWrapper(pullParser));
+                omEntry = builder.getDocumentElement();
                 list.add(omEntry);
             }
         }
@@ -1712,7 +1710,7 @@ public class BeanUtil {
      * Fix for AXIS2-5090. Use siblings with same QName instead of look for
      * children because list elements available on same level.
      */
-    Iterator parts = omElement.getParent().getChildrenWithName(partName);
+    Iterator<OMElement> parts = omElement.getParent().getChildrenWithName(partName);
     return processGenericsElement(parameter, omElement, helper, parts,
         objectSupplier, generictype);
     }
@@ -1823,9 +1821,9 @@ public class BeanUtil {
         XMLStreamReader pullParser = new ADBXMLStreamReaderImpl(eleQName, properties.toArray(), null, typeTable,
             elementFormDefault);
 
-        StAXOMBuilder stAXOMBuilder = new StAXOMBuilder(
-            OMAbstractFactory.getOMFactory(), new StreamWrapper(pullParser));
-        return stAXOMBuilder.getDocumentElement();
+        OMXMLParserWrapper builder = OMXMLBuilderFactory.createStAXOMBuilder(
+            new StreamWrapper(pullParser));
+        return builder.getDocumentElement();
     }
 
     /**

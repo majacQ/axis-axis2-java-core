@@ -184,10 +184,6 @@ public class SchemaCompiler {
 
         //load the base types
         baseSchemaTypeMap = SchemaPropertyLoader.getTypeMapperInstance().getTypeMap();
-        // adding all the soap encoding schema classes
-        processedTypemap.putAll(SchemaPropertyLoader.getTypeMapperInstance().getSoapEncodingTypesMap());
-
-
     }
 
     /**
@@ -503,7 +499,7 @@ public class SchemaCompiler {
             // register the fixed value if present
             if (xsElt.getFixedValue() != null) {
                 metainf.registerDefaultValue(xsElt.getQName(), xsElt.getFixedValue());
-                metainf.setFixed(true);
+                metainf.registerFixedQName(xsElt.getQName());
             }
 
             if (isBinary(xsElt)) {
@@ -619,7 +615,7 @@ public class SchemaCompiler {
                     String className = findClassName(schemaType.getQName(),
                                                      isArray(xsElt));
 
-                    innerElementMap.put(xsElt.getQName(), className);
+                    innerElementMap.put(xsElt.getWireName(), className);
 
                     // always store the class name in the element meta Info itself
                     // this details only needed by the unwrappig to set the complex type
@@ -642,7 +638,7 @@ public class SchemaCompiler {
                     //the anon map. we've to write it just like we treat a referenced type(giving due
                     //care that this is meant to be an attribute in some class)
 
-                    QName generatedTypeName = generateTypeQName(xsElt.getQName(), parentSchema);
+                    QName generatedTypeName = generateTypeQName(xsElt.getWireName(), parentSchema);
 
                     if (schemaType instanceof XmlSchemaComplexType) {
                         //set a name
@@ -664,7 +660,7 @@ public class SchemaCompiler {
                         processedAnonymousComplexTypesMap.remove(xsElt);
                         String className = findClassName(schemaType.getQName(), isArray(xsElt));
                         innerElementMap.put(
-                                xsElt.getQName(),
+                                xsElt.getWireName(),
                                 className);
 
                         //store in the schema map to retrive in the unwrapping
@@ -691,7 +687,7 @@ public class SchemaCompiler {
                         processedAnonymousComplexTypesMap.remove(xsElt);
                         String className = findClassName(schemaType.getQName(), isArray(xsElt));
                         innerElementMap.put(
-                                xsElt.getQName(),
+                                xsElt.getWireName(),
                                 className);
 
                         //store in the schema map
@@ -832,7 +828,7 @@ public class SchemaCompiler {
                 if (!isOuter) {
                     String className = findClassName(schemaTypeName, isArray(xsElt));
                     //since this is a inner element we should add it to the inner element map
-                    innerElementMap.put(xsElt.getQName(), className);
+                    innerElementMap.put(xsElt.getWireName(), className);
                     // set the class name to be used in unwrapping
                     xsElt.addMetaInfo(SchemaConstants.SchemaCompilerInfoHolder.CLASSNAME_KEY,
                                       className);
@@ -843,7 +839,7 @@ public class SchemaCompiler {
                 //this type is not found at all. we'll just register it with whatever the class name we can comeup with
                 if (!isOuter) {
                     String className = findClassName(schemaTypeName, isArray(xsElt));
-                    innerElementMap.put(xsElt.getQName(), className);
+                    innerElementMap.put(xsElt.getWireName(), className);
                     // set the class name to be used in unwrapping
                     xsElt.addMetaInfo(SchemaConstants.SchemaCompilerInfoHolder.CLASSNAME_KEY,
                                       className);
@@ -858,7 +854,7 @@ public class SchemaCompiler {
             if (isOuter) {
                 this.nillableElementList.add(xsElt.getQName());
             } else {
-                localNillableList.add(xsElt.getQName());
+                localNillableList.add(xsElt.getWireName());
             }
         }
 
@@ -1837,17 +1833,17 @@ public class SchemaCompiler {
 
         QName schemaTypeName = att.getSchemaTypeName();
         if (schemaTypeName != null) {
-            if (att.getQName() != null) {
+            if (att.getWireName() != null) {
                 if (baseSchemaTypeMap.containsKey(schemaTypeName)) {
 
-                    metainf.registerMapping(att.getQName(), schemaTypeName,
+                    metainf.registerMapping(att.getWireName(), schemaTypeName,
                                             baseSchemaTypeMap.get(schemaTypeName).toString(),
                                             SchemaConstants.ATTRIBUTE_TYPE);
 
                     // add optional attribute status if set
                     String use = att.getUse().toString();
                     if (USE_NONE.equals(use) || USE_OPTIONAL.equals(use)) {
-                        metainf.addtStatus(att.getQName(), SchemaConstants.OPTIONAL_TYPE);
+                        metainf.addtStatus(att.getWireName(), SchemaConstants.OPTIONAL_TYPE);
                     }
 
                     String className = findClassName(schemaTypeName, false);
@@ -1857,11 +1853,11 @@ public class SchemaCompiler {
                             className);
                     // set the default value
                     if (att.getDefaultValue() != null) {
-                        metainf.registerDefaultValue(att.getQName(), att.getDefaultValue());
+                        metainf.registerDefaultValue(att.getWireName(), att.getDefaultValue());
                     }
                     if (att.getFixedValue() != null) {
-                        metainf.registerDefaultValue(att.getQName(), att.getFixedValue());
-                        metainf.setFixed(true);
+                        metainf.registerDefaultValue(att.getWireName(), att.getFixedValue());
+                        metainf.registerFixedQName(att.getWireName());
                     }
                     // after
                 } else {
@@ -1882,14 +1878,14 @@ public class SchemaCompiler {
                                     //process simple type
                                     processSimpleSchemaType(simpleType, null, resolvedSchema, null);
                                 }
-                                metainf.registerMapping(att.getQName(),
+                                metainf.registerMapping(att.getWireName(),
                                                         schemaTypeName,
                                                         processedTypemap.get(schemaTypeName).toString(),
                                                         SchemaConstants.ATTRIBUTE_TYPE);
                                 // add optional attribute status if set
                                 String use = att.getUse().toString();
                                 if (USE_NONE.equals(use) || USE_OPTIONAL.equals(use)) {
-                                    metainf.addtStatus(att.getQName(), SchemaConstants.OPTIONAL_TYPE);
+                                    metainf.addtStatus(att.getWireName(), SchemaConstants.OPTIONAL_TYPE);
                                 }
                             }
 
@@ -1924,7 +1920,7 @@ public class SchemaCompiler {
         } else {
             // this attribute refers to a custom type, probably one of the extended simple types.
             // with the inline schema definition
-            QName attributeQName = att.getQName();
+            QName attributeQName = att.getWireName();
             if (attributeQName != null) {
                 XmlSchemaSimpleType attributeSimpleType = att.getSchemaType();
                 XmlSchema resolvedSchema = parentSchema;
@@ -1964,14 +1960,14 @@ public class SchemaCompiler {
                         processSimpleSchemaType(attributeSimpleType, null, resolvedSchema,
                                                 schemaTypeQName);
                     }
-                    metainf.registerMapping(att.getQName(),
+                    metainf.registerMapping(att.getWireName(),
                                             schemaTypeQName,
                                             processedTypemap.get(schemaTypeQName).toString(),
                                             SchemaConstants.ATTRIBUTE_TYPE);
                     // add optional attribute status if set
                     String use = att.getUse().toString();
                     if (USE_NONE.equals(use) || USE_OPTIONAL.equals(use)) {
-                        metainf.addtStatus(att.getQName(), SchemaConstants.OPTIONAL_TYPE);
+                        metainf.addtStatus(att.getWireName(), SchemaConstants.OPTIONAL_TYPE);
                     }
                 } else {
                     // TODO: handle the case when no attribute type specifed
@@ -2246,12 +2242,12 @@ public class SchemaCompiler {
                 XmlSchemaElement elt = (XmlSchemaElement) child;
                 QName referencedQName = null;
 
-                if (elt.getQName() != null) {
-                    referencedQName = elt.getQName();
+                if (elt.getWireName() != null) {
+                    referencedQName = elt.getWireName();
                     QName schemaTypeQName = elt.getSchemaType() != null ?
                                             elt.getSchemaType().getQName() : elt.getSchemaTypeName();
                     if (schemaTypeQName != null) {
-                        String clazzName = (String) processedElementTypeMap.get(elt.getQName());
+                        String clazzName = (String) processedElementTypeMap.get(elt.getWireName());
                         metainfHolder.registerMapping(referencedQName,
                                                       schemaTypeQName,
                                                       clazzName,
@@ -2269,7 +2265,7 @@ public class SchemaCompiler {
                         // register the default value as well
                         if (elt.getFixedValue() != null) {
                             metainfHolder.registerDefaultValue(referencedQName, elt.getFixedValue());
-                            metainfHolder.setFixed(true);
+                            metainfHolder.registerFixedQName(referencedQName);
                         }
                     }
                 }
@@ -2337,13 +2333,13 @@ public class SchemaCompiler {
                 }
 
                 //get the nillable state and register that on the metainf holder
-                if (localNillableList.contains(elt.getQName())) {
-                    metainfHolder.registerNillableQName(elt.getQName());
+                if (localNillableList.contains(elt.getWireName())) {
+                    metainfHolder.registerNillableQName(elt.getWireName());
                 }
 
                 //get the binary state and add that to the status map
                 if (isBinary(elt)) {
-                    metainfHolder.addtStatus(elt.getQName(),
+                    metainfHolder.addtStatus(elt.getWireName(),
                                              SchemaConstants.BINARY_TYPE);
                 }
                 // process the XMLSchemaAny

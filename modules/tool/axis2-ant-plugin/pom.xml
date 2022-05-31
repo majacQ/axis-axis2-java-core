@@ -19,23 +19,29 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>axis2</artifactId>
-        <version>1.7.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
         <relativePath>../../../pom.xml</relativePath>
     </parent>
+
     <artifactId>axis2-ant-plugin</artifactId>
+
     <name>Apache Axis2 - tool - Ant Plugin</name>
     <description>The Axis 2 Plugin for Ant Tasks.</description>
     <url>http://axis.apache.org/axis2/java/core/</url>
+
     <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/tool/axis2-ant-plugin</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/tool/axis2-ant-plugin</developerConnection>
-        <url>http://svn.apache.org/viewvc/axis/axis2/java/core/trunk/modules/tool/axis2-ant-plugin</url>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=axis-axis2-java-core.git;a=summary</url>
+        <tag>HEAD</tag>
     </scm>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.axis2</groupId>
@@ -72,11 +78,6 @@
             <artifactId>commons-logging</artifactId>
         </dependency>
         <dependency>
-            <groupId>commons-httpclient</groupId>
-            <artifactId>commons-httpclient</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
             <groupId>org.apache.neethi</groupId>
             <artifactId>neethi</artifactId>
         </dependency>
@@ -85,18 +86,15 @@
             <artifactId>xmlschema-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.geronimo.specs</groupId>
-            <artifactId>geronimo-javamail_1.4_spec</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.geronimo.specs</groupId>
-            <artifactId>geronimo-activation_1.1_spec</artifactId>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>jakarta.mail</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.ant</groupId>
             <artifactId>ant</artifactId>
         </dependency>
     </dependencies>
+
     <build>
         <plugins>
             <plugin>
@@ -123,7 +121,7 @@
                         </goals>
                         <phase>test</phase>
                         <configuration>
-                            <tasks unless="maven.test.skip">
+                            <target unless="maven.test.skip">
                                 <taskdef name="java2wsdl" classname="org.apache.axis2.tool.ant.Java2WSDLTask">
                                     <classpath>
                                         <path refid="maven.test.classpath" />
@@ -148,7 +146,7 @@
                                 <java2wsdl className="test.Service" outputLocation="${project.build.directory}/java2wsdl" outputFileName="mappings.wsdl" schemaTargetNamespace="http://www.example.org/schema/test-service">
                                     <mapping package="test" namespace="http://www.example.org/schema/test" />
                                 </java2wsdl>
-                            </tasks>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>
@@ -167,7 +165,7 @@
                                 <script>
                                     import groovy.xml.*
                                     
-                                    if (project.properties['maven.test.skip']) {
+                                    if (System.properties['maven.test.skip']) {
                                         println 'Tests are skipped'
                                         return
                                     }

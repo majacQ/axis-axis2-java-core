@@ -20,13 +20,14 @@
 package org.apache.axis2.json.gson;
 
 import org.apache.axiom.om.OMElement;
-import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.axiom.om.OMXMLBuilderFactory;
+import org.apache.axiom.om.OMXMLParserWrapper;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.AxisOperation;
 import org.apache.axis2.engine.MessageReceiver;
 import org.apache.axis2.handlers.AbstractHandler;
-import org.apache.axis2.json.gson.factory.JsonConstant;
+import org.apache.axis2.json.factory.JsonConstant;
 import org.apache.axis2.json.gson.rpc.JsonInOnlyRPCMessageReceiver;
 import org.apache.axis2.json.gson.rpc.JsonRpcMessageReceiver;
 import org.apache.axis2.wsdl.WSDLConstants;
@@ -64,12 +65,15 @@ public class JSONMessageHandler extends AbstractHandler {
     public InvocationResponse invoke(MessageContext msgContext) throws AxisFault {
         AxisOperation axisOperation = msgContext.getAxisOperation();
         if (axisOperation != null) {
+            log.debug("Axis operation has been found from the MessageContext, proceeding with the JSON request");
             MessageReceiver messageReceiver = axisOperation.getMessageReceiver();
             if (messageReceiver instanceof JsonRpcMessageReceiver || messageReceiver instanceof JsonInOnlyRPCMessageReceiver) {
                 // do not need to parse XMLSchema list, as  this message receiver will not use GsonXMLStreamReader  to read the inputStream.
             } else {
+                log.debug("JSON MessageReceiver found, proceeding with the JSON request");
                 Object tempObj = msgContext.getProperty(JsonConstant.IS_JSON_STREAM);
                 if (tempObj != null) {
+                    log.debug("JSON MessageReceiver found JSON stream, proceeding with the JSON request");
                     boolean isJSON = Boolean.valueOf(tempObj.toString());
                     Object o = msgContext.getProperty(JsonConstant.GSON_XML_STREAM_READER);
                     if (o != null) {
@@ -77,13 +81,12 @@ public class JSONMessageHandler extends AbstractHandler {
                         QName elementQname = msgContext.getAxisOperation().getMessage(WSDLConstants.MESSAGE_LABEL_IN_VALUE).getElementQName();
                         List<XmlSchema> schemas = msgContext.getAxisService().getSchema();
                         gsonXMLStreamReader.initXmlStreamReader(elementQname, schemas, msgContext.getConfigurationContext());
-                        StAXOMBuilder stAXOMBuilder = new StAXOMBuilder(gsonXMLStreamReader);
+                        OMXMLParserWrapper stAXOMBuilder = OMXMLBuilderFactory.createStAXOMBuilder(gsonXMLStreamReader);
                         OMElement omElement = stAXOMBuilder.getDocumentElement();
+                        log.debug("GsonXMLStreamReader found elementQname: " + elementQname);
                         msgContext.getEnvelope().getBody().addChild(omElement);
                     } else {
-                        if (log.isDebugEnabled()) {
-                            log.debug("GsonXMLStreamReader is null");
-                        }
+                        log.error("GsonXMLStreamReader is null");
                         throw new AxisFault("GsonXMLStreamReader should not be null");
                     }
                 } else {
@@ -91,10 +94,7 @@ public class JSONMessageHandler extends AbstractHandler {
                 }
             }
         } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Axis operation is null");
-            }
-            // message hasn't been dispatched to operation, ignore it
+            log.debug("Axis operation is null, message hasn't been dispatched to operation, ignore it");
         }
         return InvocationResponse.CONTINUE;
     }

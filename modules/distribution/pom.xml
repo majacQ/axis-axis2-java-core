@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements. See the NOTICE file
@@ -17,20 +18,30 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>axis2</artifactId>
-        <version>1.7.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <groupId>org.apache.axis2</groupId>
     <artifactId>distribution</artifactId>
+    <packaging>pom</packaging>
+
     <name>Apache Axis2 - Distribution</name>
     <description>Apache Axis2 Distribution</description>
-    <packaging>pom</packaging>
+    <url>http://axis.apache.org/axis2/java/core/</url>
+
+    <scm>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=axis-axis2-java-core.git;a=summary</url>
+        <tag>HEAD</tag>
+    </scm>
 
     <properties>
         <docs.folder.version>1_4</docs.folder.version>
@@ -69,7 +80,17 @@
         </dependency>
         <dependency>
             <groupId>org.apache.axis2</groupId>
+            <artifactId>axis2-xmlbeans-codegen</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.axis2</groupId>
             <artifactId>axis2-jibx</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.axis2</groupId>
+            <artifactId>axis2-jibx-codegen</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -94,7 +115,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.axis2</groupId>
-            <artifactId>axis2-jaxbri</artifactId>
+            <artifactId>axis2-jaxbri-codegen</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -155,6 +176,10 @@
             <artifactId>axis2-transport-local</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.ws.commons.axiom</groupId>
+            <artifactId>axiom-jaxb</artifactId>
+        </dependency>
         
         <dependency>
             <groupId>org.apache.axis2</groupId>
@@ -186,6 +211,12 @@
             <version>${project.version}</version>
             <type>mar</type>
         </dependency>
+        <dependency>
+            <groupId>org.apache.axis2</groupId>
+            <artifactId>axis2-jaxws-mar</artifactId>
+            <version>${project.version}</version>
+            <type>mar</type>
+        </dependency>
         
         <dependency>
             <groupId>org.apache.axis2</groupId>
@@ -203,10 +234,6 @@
                 <exclusion>
                     <groupId>org.apache.geronimo.specs</groupId>
                     <artifactId>geronimo-jms_1.1_spec</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.apache.geronimo.specs</groupId>
-                    <artifactId>geronimo-jta_1.0.1B_spec</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -245,31 +272,17 @@
             </exclusions>
         </dependency>
         
-        <!-- Axis2 has always been shipped with Sun's implementations of
-             JavaMail and JAF, although Axiom depends on (and has been tested
-             with) Geronimo's implementations. This should probably reevaluated. -->
-        <dependency>
-            <groupId>javax.mail</groupId>
-            <artifactId>mail</artifactId>
-            <version>${javax.mail.version}</version>
-        </dependency>
-        
-        <!-- Jalopy is used by the PrettyPrinter class in the kernel,
-             but it is invoked using reflection (and only if it is
-             found on the classpath). Therefore it is not automatically
-             added as a transitive dependency. -->
-        <dependency>
-            <groupId>jalopy</groupId>
-            <artifactId>jalopy</artifactId>
-        </dependency>
-        
         <!-- None of the Axis2 artifacts should have a dependency on log4j
              because we don't want to impose a particular logging implementation
              on our users. However, for the binary distribution, we need to
              choose one. -->
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
         </dependency>
         
         <!-- This is needed to build the WAR distribution -->
@@ -281,7 +294,9 @@
         </dependency>
         
         <!-- These are needed to run JAX-WS tools -->
-        <dependency>
+        <!-- TODO: don't add them unless you also add the corresponding license files
+                   (and check that inclusion of these dependencies conforms to ASF policies) -->
+        <!-- dependency>
             <groupId>com.sun.xml.ws</groupId>
             <artifactId>jaxws-rt</artifactId>
             <exclusions>
@@ -299,21 +314,56 @@
             <groupId>org.jvnet.staxex</groupId>
             <artifactId>stax-ex</artifactId>
             <version>1.4</version>           
+            <exclusions>
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>javax.activation</groupId>
+                    <artifactId>activation</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.sun.xml.stream.buffer</groupId>
             <artifactId>streambuffer</artifactId>
             <version>1.2</version>           
-        </dependency>
+            <exclusions>
+                <exclusion>
+                    <groupId>javax.activation</groupId>
+                    <artifactId>activation</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency -->
     </dependencies>
-    <url>http://axis.apache.org/axis2/java/core/</url>
-    <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/distribution</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/distribution</developerConnection>
-        <url>http://svn.apache.org/viewvc/axis/axis2/java/core/trunk/modules/distribution</url>
-    </scm>
+
     <build>
         <plugins>
+            <plugin>
+                <groupId>com.github.veithen.alta</groupId>
+                <artifactId>alta-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>war-location</id>
+                        <goals>
+                            <goal>generate-properties</goal>
+                        </goals>
+                        <configuration>
+                            <name>webapp</name>
+                            <value>%file%</value>
+                            <artifactSet>
+                                <dependencySet>
+                                    <scope>test</scope>
+                                    <includes>
+                                        <include>*:axis2-webapp:war:*</include>
+                                    </includes>
+                                </dependencySet>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.gmavenplus</groupId>
                 <artifactId>gmavenplus-plugin</artifactId>
@@ -335,6 +385,43 @@
                             </scripts>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>check-webapp-content</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <scripts>
+                                <script><![CDATA[
+                                    import java.util.jar.*
+                                    
+				    println("comparing directories: " +project.properties['webapp'] + " , and: " + project.build.directory + "/axis2-" + project.version + "/dist/axis2.war");
+
+                                    def jar = new JarInputStream(new FileInputStream(project.properties['webapp']))
+                                    def expected = new HashSet()
+                                    def entry
+                                    while(entry = jar.nextJarEntry) {
+                                        if (entry.name != 'META-INF/') {
+                                            expected.add(entry.name)
+                                        }
+                                    }
+                                    jar.close()
+                                    
+                                    jar = new JarInputStream(new FileInputStream(new File(project.build.directory, "axis2-" + project.version + "/dist/axis2.war")))
+                                    while(entry = jar.nextJarEntry) {
+                                        if (entry.name != 'META-INF/' && !expected.remove(entry.name)) {
+                                            throw new Error("Unexpected entry in Web app: " + entry.name + ", path: " + project.build.directory + "/axis2-" + project.version + "/dist/axis2.war , file is not in: " +project.properties['webapp'])
+                                        }
+                                    }
+                                    if (!expected.empty) {
+                                        throw new Error("Missing entries in Web app: " + expected)
+                                    }
+                                    jar.close()
+                                ]]></script>
+                            </scripts>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
@@ -347,6 +434,7 @@
                         </goals>
                         <configuration>
                             <outputDirectory>${project.build.directory}/tmp-repository</outputDirectory>
+                            <stripServiceVersion>false</stripServiceVersion>
                             <generateFileLists>true</generateFileLists>
                         </configuration>
                     </execution>
@@ -374,6 +462,27 @@
                 </executions>
             </plugin>
             
+            <!-- Always remove files from a previous run of the integration tests. -->
+            <plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>clean-test-files</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                        <configuration>
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                            <filesets>
+                                <fileset>
+                                    <directory>${project.build.directory}/axis2-${project.version}</directory>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <!-- Prepare some additional dependencies required by specific samples. We could
                  also do this by invoking the relevant download.jars targets in the provided
                  ant scripts, but this may cause issues with HTTP proxies and has the disadvantage
@@ -418,26 +527,44 @@
                             <goal>run</goal>
                         </goals>
                         <configuration>
-                            <tasks>
+                            <target>
                                 <unzip src="${project.build.directory}/axis2-${project.version}-bin.zip" dest="${project.build.directory}" />
                                 
+                                <!-- Build the web app -->
+                                <ant dir="${project.build.directory}/axis2-${project.version}/webapp" useNativeBasedir="true" />
+                                
                                 <!-- Test of the databinding sample -->
-                                <ant dir="${project.build.directory}/axis2-${project.version}/samples/databinding"/>
+                                <ant dir="${project.build.directory}/axis2-${project.version}/samples/databinding" />
                                 
                                 <!-- Test of the mtom sample -->
-                                <ant dir="${project.build.directory}/axis2-${project.version}/samples/mtom" target="generate.service"/>
-                                <ant dir="${project.build.directory}/axis2-${project.version}/samples/mtom" target="generate.client"/>
+                                <ant dir="${project.build.directory}/axis2-${project.version}/samples/mtom" target="generate.service" />
+                                <ant dir="${project.build.directory}/axis2-${project.version}/samples/mtom" target="generate.client" />
                                 
                                 <!-- Test of the faulthandling sample -->
-                                <ant dir="${project.build.directory}/axis2-${project.version}/samples/faulthandling" target="generate.service"/>
-                            </tasks>
+                                <ant dir="${project.build.directory}/axis2-${project.version}/samples/faulthandling" target="generate.service" />
+                                
+                                <!-- Test of the json sample -->
+                                <ant dir="${project.build.directory}/axis2-${project.version}/samples/json" target="generate.service" />
+                                <ant dir="${project.build.directory}/axis2-${project.version}/samples/json" target="client.jar" />
+                            </target>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
             <plugin>
+                <groupId>com.github.veithen.invoker</groupId>
+                <artifactId>resolver-proxy-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>start</goal>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <artifactId>maven-invoker-plugin</artifactId>
-                <version>1.5</version>
                 <executions>
                     <execution>
                         <id>build-maven-samples</id>
@@ -456,8 +583,7 @@
                 </executions>
             </plugin>
             
-            <plugin>
-                <!-- We don't want to deploy the distributions to the Maven repository.
+            <plugin><!-- We don't want to deploy the distributions to the Maven repository.
                      Reasons:
                       * Deploying the distributions will heavily increase the size of
                         each release on the Maven repos.
@@ -470,13 +596,14 @@
             </plugin>
         </plugins>
     </build>
+
     <profiles>
         <profile>
             <id>apache-release</id>
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>net.ju-n.maven.plugins</groupId>
+                        <groupId>net.nicoulaj.maven.plugins</groupId>
                         <artifactId>checksum-maven-plugin</artifactId>
                         <executions>
                             <execution>

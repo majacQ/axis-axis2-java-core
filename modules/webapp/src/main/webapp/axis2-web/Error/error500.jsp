@@ -21,7 +21,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
   <head>
-    <jsp:include page="../include/httpbase.jsp"/>
+    <jsp:include page="/WEB-INF/include/httpbase.jsp"/>
     <title>Axis2 :: Internal server error</title>
     <link href="axis2-web/css/axis-style.css" rel="stylesheet" type="text/css">
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
@@ -52,7 +52,7 @@
         <table summary="embedded footer table">
           <tr><td><hr></td></tr>
           <tr>
-            <td style="align: center">Copyright &#169; 1999-2006, The Apache Software Foundation<br>Licensed under the <a
+            <td style="align: center">Copyright &#169; 1999-2021, The Apache Software Foundation<br>Licensed under the <a
               href="http://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>.</td>
           </tr>
         </table>

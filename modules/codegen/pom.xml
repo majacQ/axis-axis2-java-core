@@ -19,17 +19,29 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>axis2</artifactId>
-        <version>1.7.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
+
     <artifactId>axis2-codegen</artifactId>
+
     <name>Apache Axis2 - Code Generation</name>
     <description>Axis2 Code Generation module</description>
+    <url>http://axis.apache.org/axis2/java/core/</url>
+
+    <scm>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=axis-axis2-java-core.git;a=summary</url>
+        <tag>HEAD</tag>
+    </scm>
+
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -40,6 +52,11 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>axis2-adb</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.googlejavaformat</groupId>
+            <artifactId>google-java-format</artifactId>
+            <version>1.7</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -55,7 +72,7 @@
         </dependency>
         <dependency>
             <groupId>com.sun.xml.ws</groupId>
-            <artifactId>jaxws-tools</artifactId>            
+            <artifactId>jaxws-tools</artifactId>
             <exclusions>
                 <exclusion>
                     <groupId>com.sun.xml.ws</groupId>
@@ -68,32 +85,33 @@
             </exclusions>
         </dependency>
         <dependency>
-        	<groupId>com.sun.xml.bind</groupId>
-            <artifactId>jaxb-xjc</artifactId>           
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-xjc</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
              <groupId>com.sun.xml.ws</groupId>
-             <artifactId>jaxws-rt</artifactId>            
+             <artifactId>jaxws-rt</artifactId>
              <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
-	<dependency>
-	        <groupId>xmlunit</groupId>
-	        <artifactId>xmlunit</artifactId>
+        <dependency>
+            <groupId>org.xmlunit</groupId>
+            <artifactId>xmlunit-legacy</artifactId>
             <scope>test</scope>
-	 </dependency>
+            <exclusions>
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
-    <url>http://axis.apache.org/axis2/java/core/</url>
-    <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/codegen</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/codegen</developerConnection>
-        <url>http://svn.apache.org/viewvc/axis/axis2/java/core/trunk/modules/codegen</url>
-    </scm>
+
     <build>
         <sourceDirectory>src</sourceDirectory>
         <testSourceDirectory>test</testSourceDirectory>
@@ -143,10 +161,10 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <inherited>true</inherited>
-                <configuration>                  
+                <configuration>
                     <includes>
-                        <include>**/*Test.java</include>                       
-                    </includes>                    
+                        <include>**/*Test.java</include>
+                    </includes>
                 </configuration>
             </plugin>
 
@@ -158,7 +176,7 @@
                         <id>generate-test-sources</id>
                         <phase>generate-test-sources</phase>
                         <configuration>
-                            <tasks unless="maven.test.skip">
+                            <target unless="maven.test.skip">
                                 <!-- Set a property that can be picked up from the ant build.xml's -->
                                 <property name="maven.class.path" refid="maven.test.classpath" />
                                 <echo>Building WSDLs...</echo>
@@ -168,7 +186,7 @@
                                     <path refid="maven.compile.classpath" />
                                 </path>
                                 <ant antfile="build-wsdls.xml" inheritall="true" inheritrefs="true" dir="." target="wsdl-codegen" />
-                            </tasks>
+                            </target>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -178,7 +196,7 @@
                         <id>process-resources</id>
                         <phase>process-resources</phase>
                         <configuration>
-                            <tasks>
+                            <target>
                                 <tstamp>
                                     <format property="build.time" pattern="MMM dd, yyyy (hh:mm:ss z)" locale="en" />
                                 </tstamp>
@@ -189,7 +207,7 @@
                                         <filter token="today" value=" Built on : ${build.time}" />
                                     </filterset>
                                 </copy>
-                            </tasks>
+                            </target>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -214,7 +232,7 @@
                         </goals>
                         <configuration>
                             <outputDirectory>${project.build.directory}/templates</outputDirectory>
-                            <resources>          
+                            <resources>
                                 <resource>
                                     <directory>../adb-codegen/src</directory>
                                     <includes>
@@ -234,13 +252,13 @@
                                     </includes>
                                 </resource>
                                 <resource>
-                                    <directory>../jibx/src</directory>
+                                    <directory>../jibx-codegen/src</directory>
                                     <includes>
                                         <include>**/*.xsl</include>
                                     </includes>
                                 </resource>
-                            </resources>              
-                        </configuration>            
+                            </resources>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

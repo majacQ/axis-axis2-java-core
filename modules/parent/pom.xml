@@ -112,7 +112,7 @@
         <woden.version>1.0M8</woden.version>
         <wsdl4j.version>1.6.2</wsdl4j.version>
         <xalan.version>2.7.0</xalan.version>
-        <xmlbeans.version>2.3.0</xmlbeans.version>
+        <xmlbeans.version>3.0.0</xmlbeans.version>
         <xml_resolver.version>1.2</xml_resolver.version>
         <xmlschema.version>1.4.3</xmlschema.version>
         <xmlunit.version>1.1</xmlunit.version>

@@ -269,17 +269,6 @@ public class AxisConfiguration extends AxisDescription {
     }
 
     /**
-     * To remove a given module from the system
-     *
-     * @param module name of module to remove
-     * @deprecated Use {@link #removeModule(String,String)}
-     */
-    public void removeModule(String module) {
-        allModules.remove(module);
-        // TODO disengage has to be done here
-    }
-
-    /**
      * Remove a module with moduleName & moduleVersion
      *
      * @param moduleName the name of the module to remove
@@ -457,10 +446,10 @@ public class AxisConfiguration extends AxisDescription {
 
         Map<String, AxisEndpoint> endpoints = axisService.getEndpoints();
         if (endpoints == null || endpoints.size() == 0) {
-			org.apache.axis2.deployment.util.Utils.addEndpointsToService(
-					axisService, axisService.getAxisConfiguration());
+            org.apache.axis2.deployment.util.Utils.addEndpointsToService(
+                    axisService, axisService.getAxisConfiguration());
             endpoints = axisService.getEndpoints();
-		}
+        }
 
         String serviceName = axisService.getName();
         addToAllServicesMap(axisService);
@@ -568,20 +557,6 @@ public class AxisConfiguration extends AxisDescription {
                     + transport.getName());
         }
         transportsOut.put(transport.getName(), transport);
-    }
-
-    /**
-     * Engages the default module version corresponding to the given module name,
-     * or if the module name contains version number in it then it will engage
-     * the correct module. Both the below cases are valid : -
-     * 1. engageModule("addressing"); 2. engageModule("addressing-1.23");
-     *
-     * @param moduleref QName of module to engage
-     * @throws AxisFault
-     * @deprecated Please use the String version instead
-     */
-    public void engageModule(QName moduleref) throws AxisFault {
-        engageModule(moduleref.getLocalPart());
     }
 
     /**
@@ -972,17 +947,7 @@ public class AxisConfiguration extends AxisDescription {
      */
     public HashMap<String, AxisModule> getModules() {
         return allModules;
-    }
-
-    /**
-     * Get a list of the global modules
-     *
-     * @return the global module list.  BE CAREFUL, this list is mutable.
-     * @deprecated please use addGlobalModule()
-     */
-    public List<String> getGlobalModules() {
-        return globalModuleList;
-    }
+    }   
 
     /**
      * @return Returns ArrayList.
@@ -1133,7 +1098,7 @@ public class AxisConfiguration extends AxisDescription {
     }
 
     public void setInPhasesUptoAndIncludingPostDispatch(
-    		List<Phase> inPhasesUptoAndIncludingPostDispatch) {
+            List<Phase> inPhasesUptoAndIncludingPostDispatch) {
         this.inPhasesUptoAndIncludingPostDispatch = inPhasesUptoAndIncludingPostDispatch;
     }
 
@@ -1283,10 +1248,10 @@ public class AxisConfiguration extends AxisDescription {
      * @return ArrayList<AxisObserver>
      */
     public ArrayList<AxisObserver> getObserversList() {
-    	AxisObserver[] array = observerSet.toArray(new AxisObserver[observerSet.size()]);
-    	ArrayList<AxisObserver> observers = new ArrayList<AxisObserver>(array.length);
-    	observers.addAll(Arrays.asList(array));
-    	return observers;
+        AxisObserver[] array = observerSet.toArray(new AxisObserver[observerSet.size()]);
+        ArrayList<AxisObserver> observers = new ArrayList<AxisObserver>(array.length);
+        observers.addAll(Arrays.asList(array));
+        return observers;
     }
 
     public boolean isStart() {
@@ -1457,7 +1422,7 @@ public class AxisConfiguration extends AxisDescription {
                 break;
             }
             case PhaseMetadata.OUT_FLOW : {
-            	List<Phase> phaseList = phasesinfo.getOUTPhases();
+                List<Phase> phaseList = phasesinfo.getOUTPhases();
                 phaseList = findAndInsertPhase(d, phaseList);
                 if (phaseList != null) {
                     phasesinfo.setOUTPhases(phaseList);
@@ -1465,7 +1430,7 @@ public class AxisConfiguration extends AxisDescription {
                 break;
             }
             case PhaseMetadata.FAULT_OUT_FLOW : {
-            	List<Phase> phaseList = phasesinfo.getOutFaultPhaseList();
+                List<Phase> phaseList = phasesinfo.getOutFaultPhaseList();
                 phaseList = findAndInsertPhase(d, phaseList);
                 if (phaseList != null) {
                     phasesinfo.setOUT_FaultPhases(phaseList);
@@ -1473,7 +1438,7 @@ public class AxisConfiguration extends AxisDescription {
                 break;
             }
             case PhaseMetadata.FAULT_IN_FLOW : {
-            	List<Phase> phaseList = phasesinfo.getIN_FaultPhases();
+                List<Phase> phaseList = phasesinfo.getIN_FaultPhases();
                 phaseList = findAndInsertPhase(d, phaseList);
                 if (phaseList != null) {
                     phasesinfo.setIN_FaultPhases(phaseList);
@@ -1531,13 +1496,13 @@ public class AxisConfiguration extends AxisDescription {
     }
     
     private void processEndpoints(AxisService axisService,
-    		AxisConfiguration axisConfiguration) throws AxisFault {
+            AxisConfiguration axisConfiguration) throws AxisFault {
         Map<String, AxisEndpoint> enspoints = axisService.getEndpoints();
         if (enspoints == null || enspoints.size() == 0) {
-			org.apache.axis2.deployment.util.Utils.addEndpointsToService(
-					axisService, axisConfiguration);
-		}
-	}
+            org.apache.axis2.deployment.util.Utils.addEndpointsToService(
+                    axisService, axisConfiguration);
+        }
+    }
 
     public boolean isChildFirstClassLoading(){
         boolean childFirstClassLoading = false;
@@ -1565,5 +1530,12 @@ public class AxisConfiguration extends AxisDescription {
             }
         }
         return axisService;
+    }
+    
+    public boolean isGlobalModulesRegistered(String moduleName) {
+        if (globalModuleList.contains(moduleName)) {
+            return true;
+        }
+        return false;
     }
 }

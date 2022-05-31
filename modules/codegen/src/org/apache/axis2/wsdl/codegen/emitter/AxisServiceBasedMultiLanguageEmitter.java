@@ -159,7 +159,7 @@ public class AxisServiceBasedMultiLanguageEmitter implements Emitter {
         //populate the MEP -> class map
         mepToClassMap = new HashMap();
         mepToClassMap.put(WSDL2Constants.MEP_URI_IN_ONLY,
-                "org.apache.axis2.receivers.AbstractInMessageReceiver");
+                "org.apache.axis2.receivers.AbstractMessageReceiver");
         mepToClassMap.put(WSDL2Constants.MEP_URI_ROBUST_IN_ONLY,
                 "org.apache.axis2.receivers.AbstractMessageReceiver");
         mepToClassMap.put(WSDL2Constants.MEP_URI_IN_OUT,
@@ -167,21 +167,21 @@ public class AxisServiceBasedMultiLanguageEmitter implements Emitter {
 
         //populate the MEP -> suffix map
         mepToSuffixMap = new HashMap();
-        mepToSuffixMap.put(WSDLConstants.WSDL20_2004_Constants.MEP_URI_IN_ONLY,
-                MESSAGE_RECEIVER_SUFFIX + "InOnly");
-        mepToSuffixMap.put(WSDLConstants.WSDL20_2006Constants.MEP_URI_IN_ONLY,
+        mepToSuffixMap.put(WSDL2Constants.MEP_URI_IN_ONLY,
                 MESSAGE_RECEIVER_SUFFIX + "InOnly");
         mepToSuffixMap.put(WSDL2Constants.MEP_URI_IN_ONLY,
                 MESSAGE_RECEIVER_SUFFIX + "InOnly");
-        mepToSuffixMap.put(WSDLConstants.WSDL20_2004_Constants.MEP_URI_ROBUST_IN_ONLY,
-                MESSAGE_RECEIVER_SUFFIX + "RobustInOnly");
-        mepToSuffixMap.put(WSDLConstants.WSDL20_2006Constants.MEP_URI_ROBUST_IN_ONLY,
+        mepToSuffixMap.put(WSDL2Constants.MEP_URI_IN_ONLY,
+                MESSAGE_RECEIVER_SUFFIX + "InOnly");
+        mepToSuffixMap.put(WSDL2Constants.MEP_URI_ROBUST_IN_ONLY,
                 MESSAGE_RECEIVER_SUFFIX + "RobustInOnly");
         mepToSuffixMap.put(WSDL2Constants.MEP_URI_ROBUST_IN_ONLY,
                 MESSAGE_RECEIVER_SUFFIX + "RobustInOnly");
-        mepToSuffixMap.put(WSDLConstants.WSDL20_2004_Constants.MEP_URI_IN_OUT,
+        mepToSuffixMap.put(WSDL2Constants.MEP_URI_ROBUST_IN_ONLY,
+                MESSAGE_RECEIVER_SUFFIX + "RobustInOnly");
+        mepToSuffixMap.put(WSDL2Constants.MEP_URI_IN_OUT,
                 MESSAGE_RECEIVER_SUFFIX + "InOut");
-        mepToSuffixMap.put(WSDLConstants.WSDL20_2006Constants.MEP_URI_IN_OUT,
+        mepToSuffixMap.put(WSDL2Constants.MEP_URI_IN_OUT,
                 MESSAGE_RECEIVER_SUFFIX + "InOut");
         mepToSuffixMap.put(WSDL2Constants.MEP_URI_IN_OUT,
                 MESSAGE_RECEIVER_SUFFIX + "InOut");

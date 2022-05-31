@@ -40,6 +40,7 @@
         <xsl:variable name="hasParticleType" select="@hasParticleType"/>
         <xsl:variable name="usewrapperclasses" select="@usewrapperclasses"/>
         <xsl:variable name="ignoreunexpected" select="@ignoreunexpected"/>
+        <xsl:variable name="abstractType" select="@isAbstract"/>
 
         <!-- write the class header. this should be done only when unwrapped -->
 
@@ -116,6 +117,7 @@
                <xsl:variable name="maxInFacet"><xsl:value-of select="@maxInFacet"/></xsl:variable>
                <xsl:variable name="minInFacet"><xsl:value-of select="@minInFacet"/></xsl:variable>
                <xsl:variable name="patternFacet"><xsl:value-of select="@patternFacet"/></xsl:variable>
+               <xsl:variable name="fixed" select="@fixed"/>
             <xsl:variable name="shortTypeNameUncapped"  select="@shorttypename"/>
             <xsl:variable name="shortTypeName"
                select="concat(translate( substring($shortTypeNameUncapped, 1, 1 ),'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' ), substring($shortTypeNameUncapped, 2, string-length($shortTypeNameUncapped)))" />
@@ -160,12 +162,12 @@
                          protected void validate<xsl:value-of select="$javaName"/>(<xsl:value-of select="$propertyType"/> param){
                          <xsl:if test="not(@unbound) and @array">
                               if ((param != null) &amp;&amp; (param.length &gt; <xsl:value-of select="@maxOccurs"/>)){
-                                throw new java.lang.RuntimeException();
+                                throw new java.lang.RuntimeException("Input values do not follow defined XSD restrictions");
                               }
                          </xsl:if>
                          <xsl:if test="$min!=0 and @array">
                               if ((param != null) &amp;&amp; (param.length &lt; <xsl:value-of select="$min"/>)){
-                                throw new java.lang.RuntimeException();
+                                throw new java.lang.RuntimeException("Input values do not follow defined XSD restrictions");
                               }
                          </xsl:if>
                          }
@@ -332,12 +334,12 @@
                               protected void validate<xsl:value-of select="$javaName"/>(<xsl:value-of select="$propertyType"/> param){
                              <xsl:if test="not(@unbound)">
                               if ((param != null) &amp;&amp; (param.length &gt; <xsl:value-of select="@maxOccurs"/>)){
-                                throw new java.lang.RuntimeException();
+                                throw new java.lang.RuntimeException("Input values do not follow defined XSD restrictions");
                               }
                               </xsl:if>
                               <xsl:if test="$min!=0">
                               if ((param != null) &amp;&amp; (param.length &lt; <xsl:value-of select="$min"/>)){
-                                throw new java.lang.RuntimeException();
+                                throw new java.lang.RuntimeException("Input values do not follow defined XSD restrictions");
                               }
                               </xsl:if>
                               }
@@ -461,7 +463,7 @@
 
                                             }
                                             else {
-                                                throw new java.lang.RuntimeException();
+                                                throw new java.lang.RuntimeException("Input values do not follow defined XSD restrictions");
                                             }
                                         </xsl:when>
                                         <xsl:when test="(@patternFacet)">
@@ -469,7 +471,7 @@
                                                 this.<xsl:value-of select="$varName"/>=param;
                                             }
                                             else {
-                                                throw new java.lang.RuntimeException();
+                                                throw new java.lang.RuntimeException("Input values do not follow defined XSD restrictions");
                                             }
                                         </xsl:when>
                                         <xsl:when test="(@lenFacet)">
@@ -477,7 +479,7 @@
                                                 this.<xsl:value-of select="$varName"/>=param;
                                             }
                                             else {
-                                                throw new java.lang.RuntimeException();
+                                                throw new java.lang.RuntimeException("Input values do not follow defined XSD restrictions");
                                             }
                                         </xsl:when>
                                         <xsl:when test="(@maxLenFacet) or (@minLenFacet)">
@@ -486,16 +488,16 @@
                                                 this.<xsl:value-of select="$varName"/>=param;
                                             }
                                             else {
-                                                throw new java.lang.RuntimeException();
+                                                throw new java.lang.RuntimeException("Input values do not follow defined XSD restrictions");
                                             }
                                         </xsl:when>
                                         <xsl:when test="(@totalDigitsFacet)">
-                                            java.lang.String totalDigitsDecimal = org.apache.axis2.databinding.utils.ConverterUtil.convertToStandardDecimalNotation("<xsl:value-of select="$totalDigitsFacet"/>").toString();
-                                            if (org.apache.axis2.databinding.utils.ConverterUtil.compare(param, totalDigitsDecimal) &gt; 0){
+                                            java.lang.String totalDigitsDecimal = org.apache.axis2.databinding.utils.ConverterUtil.convertToStandardDecimalNotation("<xsl:value-of select="$totalDigitsFacet"/>").toPlainString();
+                                            if (org.apache.axis2.databinding.utils.ConverterUtil.compare(param, totalDigitsDecimal) &lt; 0){
                                                     this.<xsl:value-of select="$varName"/>=param;
                                             }
                                             else {
-                                                throw new java.lang.RuntimeException();
+                                                throw new java.lang.RuntimeException("Input values do not follow defined XSD restrictions");
                                             }
                                         </xsl:when>
                                         <xsl:when test="@maxExFacet or @minExFacet or @maxInFacet or @minInFacet">
@@ -504,7 +506,7 @@
                                                         this.<xsl:value-of select="$varName"/>=param;
                                                     }
                                                     else {
-                                                        throw new java.lang.RuntimeException();
+                                                        throw new java.lang.RuntimeException("Input values do not follow defined XSD restrictions");
                                                     }
                                             </xsl:if>
                                             <xsl:if test="@minExFacet">
@@ -512,7 +514,7 @@
                                                     this.<xsl:value-of select="$varName"/>=param;
                                                 }
                                                 else {
-                                                    throw new java.lang.RuntimeException();
+                                                    throw new java.lang.RuntimeException("Input values do not follow defined XSD restrictions");
                                                 }
                                             </xsl:if>
                                             <xsl:if test="@maxInFacet">
@@ -520,7 +522,7 @@
                                                     this.<xsl:value-of select="$varName"/>=param;
                                                 }
                                                 else {
-                                                    throw new java.lang.RuntimeException();
+                                                    throw new java.lang.RuntimeException("Input values do not follow defined XSD restrictions");
                                                 }
                                             </xsl:if>
                                             <xsl:if test="@minInFacet">
@@ -528,7 +530,7 @@
                                                     this.<xsl:value-of select="$varName"/>=param;
                                                 }
                                                 else {
-                                                    throw new java.lang.RuntimeException();
+                                                    throw new java.lang.RuntimeException("Input values do not follow defined XSD restrictions");
                                                 }
                                             </xsl:if>
                                         </xsl:when>
@@ -539,7 +541,9 @@
                                     </xsl:when>
 
                                     <xsl:otherwise>
+                                       <xsl:if test="not($fixed)">
                                             this.<xsl:value-of select="$varName"/>=param;
+                                       </xsl:if>
                                     </xsl:otherwise>
                                 </xsl:choose>
 
@@ -1763,7 +1767,7 @@
             <xsl:variable name="shortTypeName"
                select="concat(translate( substring($shortTypeNameUncapped, 1, 1 ),'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' ), substring($shortTypeNameUncapped, 2, string-length($shortTypeNameUncapped)))" />
 
-            <xsl:if test="$simple and not(@attribute) and not(enumFacet)">
+            <xsl:if test="$simple and not($abstractType) and not(@attribute) and not(enumFacet)">
                 public static <xsl:value-of select="$name"/> fromString(java.lang.String value,
                                                     java.lang.String namespaceURI){
                     <xsl:value-of select="$name"/> returnValue = new  <xsl:value-of select="$name"/>();
@@ -1807,16 +1811,17 @@
                        </xsl:choose>
 
                     // handle unexpected enumeration values properly
-                    <xsl:if test="$ignoreunexpected">
-                        log.warn("Unexpected value " + value + " for enumeration <xsl:value-of select="$name"/>");
-                        return enumeration;
-                    </xsl:if>
-                    <xsl:if test="not($ignoreunexpected)">
-                        if ((enumeration == null) &amp;&amp; !((value == null) || (value.equals("")))) {
-                            throw new java.lang.IllegalArgumentException();
-                        }
-                        return enumeration;
-                    </xsl:if>
+                    if (enumeration == null  <xsl:if test="$propertyType='string'">&amp;&amp; !((value == null) || (value.equals("")))</xsl:if>) {
+                        <xsl:choose>
+                            <xsl:when test="$ignoreunexpected">
+                                log.warn("Unexpected value " + value + " for enumeration <xsl:value-of select="$name"/>");
+                            </xsl:when>
+                            <xsl:otherwise>
+                                throw new java.lang.IllegalArgumentException();
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    }
+                    return enumeration;
                 }
                 public static <xsl:value-of select="$name"/> fromString(java.lang.String value,java.lang.String namespaceURI)
                       throws java.lang.IllegalArgumentException {
@@ -2151,7 +2156,6 @@
                             <xsl:variable name="loopBoolName">loopDone<xsl:value-of select="position()"/></xsl:variable>
                             <xsl:variable name="startQname">startQname<xsl:value-of select="position()"/></xsl:variable>
                             <xsl:variable name="stateMachineName">stateMachine<xsl:value-of select="position()"/></xsl:variable>
-                            <xsl:variable name="builderName">builder<xsl:value-of select="position()"/></xsl:variable>
                             <xsl:variable name="basePropertyType"><xsl:value-of select="@arrayBaseType"/></xsl:variable>
                             <xsl:variable name="namespace"><xsl:value-of select="@nsuri"/></xsl:variable>
                             <xsl:variable name="min"><xsl:value-of select="@minOccurs"/></xsl:variable>
@@ -2192,7 +2196,7 @@
                                     <!-- We must be a named type or element with anonymous type. -->
                                     <!-- Elements with a named type have a single simple (non-array) property for their type -->
                                     // Process the array and step past its final element's end.
-                                    <xsl:variable name="basePropertyType"><xsl:value-of select="@arrayBaseType"/></xsl:variable>
+                                    
                                     <xsl:choose>
                                         <xsl:when test="@ours">
                                              <xsl:choose>
@@ -2305,14 +2309,7 @@
                                              while (!<xsl:value-of select="$loopBoolName"/>){
                                                  event = reader.getEventType();
                                                  if (javax.xml.stream.XMLStreamConstants.START_ELEMENT == event){
-
-                                                      // We need to wrap the reader so that it produces a fake START_DOCUEMENT event
-                                                      org.apache.axis2.databinding.utils.NamedStaxOMBuilder <xsl:value-of select="$builderName"/>
-                                                         = new org.apache.axis2.databinding.utils.NamedStaxOMBuilder(
-                                                              new org.apache.axis2.util.StreamWrapper(reader), reader.getName());
-
-                                                       <xsl:value-of select="$listName"/>.add(<xsl:value-of select="$builderName"/>.getOMElement());
-                                                        reader.next();
+                                                       <xsl:value-of select="$listName"/>.add(org.apache.axis2.databinding.utils.FactoryUtil.extractElement(reader, true));
                                                         if (reader.isEndElement()) {
                                                             // we have two countinuos end elements
                                                            <xsl:value-of select="$loopBoolName"/> = true;
@@ -2469,12 +2466,7 @@
                                                           }else{
                                                       </xsl:if>
 
-                                                      // We need to wrap the reader so that it produces a fake START_DOCUEMENT event
-                                                      org.apache.axis2.databinding.utils.NamedStaxOMBuilder <xsl:value-of select="$builderName"/>
-                                                         = new org.apache.axis2.databinding.utils.NamedStaxOMBuilder(
-                                                              new org.apache.axis2.util.StreamWrapper(reader), <xsl:value-of select="$startQname"/>);
-
-                                                       <xsl:value-of select="$listName"/>.add(<xsl:value-of select="$builderName"/>.getOMElement().getFirstElement());
+                                                       <xsl:value-of select="$listName"/>.add(org.apache.axis2.databinding.utils.FactoryUtil.extractElement(reader, false).getFirstElement());
                                                        <xsl:if test="@nillable">}</xsl:if>
                                                  } else if (javax.xml.stream.XMLStreamConstants.START_ELEMENT == event &amp;&amp;
                                                             !<xsl:value-of select="$startQname"/>.equals(reader.getName())){
@@ -2638,16 +2630,8 @@
                                 <xsl:when test="@any">
                                     <!--No concerns of being nillable here. if it's ours and if the nillable attribute was present
                                         we would have outputted a null already-->
-                                     <!--This can be any element and we may not know the name. so we pick the name of the element from the parser-->
-                                     //use the QName from the parser as the name for the builder
-                                     javax.xml.namespace.QName <xsl:value-of select="$startQname"/> = reader.getName();
 
-                                     // We need to wrap the reader so that it produces a fake START_DOCUMENT event
-                                     // this is needed by the builder classes
-                                     org.apache.axis2.databinding.utils.NamedStaxOMBuilder <xsl:value-of select="$builderName"/> =
-                                         new org.apache.axis2.databinding.utils.NamedStaxOMBuilder(
-                                             new org.apache.axis2.util.StreamWrapper(reader),<xsl:value-of select="$startQname"/>);
-                                     object.set<xsl:value-of select="$javaName"/>(<xsl:value-of select="$builderName"/>.getOMElement());
+                                     object.set<xsl:value-of select="$javaName"/>(org.apache.axis2.databinding.utils.FactoryUtil.extractElement(reader, false));
                                      <xsl:if test="$isType or $anon">  <!-- This is a subelement property to be consumed -->
                                          reader.next();
                                      </xsl:if>
@@ -2736,12 +2720,6 @@
                                         }
                                         <!-- set the attribute values here since onbject is not initalized yet -->
                                         <xsl:for-each select="../property[@attribute]">
-                                            <xsl:variable name="propertyName" select="@name"/>
-                                            <xsl:variable name="propertyType" select="@type"/>
-                                            <xsl:variable name="shortTypeNameUncapped"  select="@shorttypename"/>
-                                            <xsl:variable name="shortTypeName"
-                                            select="concat(translate(substring($shortTypeNameUncapped, 1, 1 ),'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' ), substring($shortTypeNameUncapped, 2, string-length($shortTypeNameUncapped)))" />
-                                            <xsl:variable name="javaName" select="@javaname"/>
                                             <xsl:variable name="attribName">tempObjectAttrib<xsl:value-of select="$propertyName"/></xsl:variable>
 
                                             <xsl:if test="$propertyName != 'extraAttributes'">

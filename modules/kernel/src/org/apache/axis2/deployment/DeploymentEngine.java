@@ -22,7 +22,6 @@ package org.apache.axis2.deployment;
 
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.Constants;
-import org.apache.axis2.classloader.JarFileClassLoader;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.deployment.repository.util.ArchiveReader;
 import org.apache.axis2.deployment.repository.util.DeploymentFileData;
@@ -154,7 +153,7 @@ public abstract class DeploymentEngine implements DeploymentConstants {
                 .calculateDefaultModuleVersion(axisConfig.getModules(), axisConfig);
         try {
             try {
-                axisConfig.setRepository(axisRepo.toURL());
+                axisConfig.setRepository(axisRepo.toURI().toURL());
             } catch (MalformedURLException e) {
                 log.info(e.getMessage());
             }
@@ -800,11 +799,13 @@ public abstract class DeploymentEngine implements DeploymentConstants {
      * @throws DeploymentException if there's a problem
      */
     protected void setClassLoaders(String axis2repoURI) throws DeploymentException {
-        ClassLoader sysClassLoader =
-                Utils.getClassLoader(Thread.currentThread().getContextClassLoader(), axis2repoURI,
-                        axisConfig.isChildFirstClassLoading());
-
-        axisConfig.setSystemClassLoader(sysClassLoader);
+        if (axisConfig.getSystemClassLoader() == null) {
+            ClassLoader sysClassLoader =
+                    Utils.getClassLoader(Thread.currentThread().getContextClassLoader(), axis2repoURI,
+                            axisConfig.isChildFirstClassLoading());
+    
+            axisConfig.setSystemClassLoader(sysClassLoader);
+        }
         if (servicesDir.exists()) {
             axisConfig.setServiceClassLoader(
                     Utils.getClassLoader(axisConfig.getSystemClassLoader(), servicesDir,
@@ -930,14 +931,29 @@ public abstract class DeploymentEngine implements DeploymentConstants {
     }
 
     private void initializeDeployers(ConfigurationContext configContext) {
-        serviceDeployer = new ServiceDeployer();
-        serviceDeployer.init(configContext);
-        if (this.servicesDir != null) {
-            serviceDeployer.setDirectory(this.servicesDir.getName());
-        }
+        
         for (Map<String, Deployer> extensionMap : deployerMap.values()) {
             for (Deployer deployer : extensionMap.values()) {
                 deployer.init(configContext);
+                if (deployer instanceof AbstractDeployer) {
+                    for (Iterator<ServiceBuilderExtension> sbeItr = ((AbstractDeployer) deployer)
+                            .getServiceBuilderExtensions().iterator(); sbeItr.hasNext();) {
+                        // init ServiceBuilderExtensions
+                        ServiceBuilderExtension builderExtension = sbeItr.next();
+                        builderExtension.init(configContext);
+                        ((AbstractDeployer) deployer).addServiceBuilderExtensions(builderExtension);                        
+                    }
+                    /*
+                     * URL based deployment does not fully based on standard
+                     * deployment architecture hence it's require to set
+                     * serviceDeployer variable. serviceDeployer variable
+                     * set only if the ServiceDeployer has been registered
+                     * on axis2.xml file.
+                     */
+                    if (deployer instanceof ServiceDeployer) {
+                        serviceDeployer = (ServiceDeployer) deployer;
+                    }
+                }
             }
         }
     }
@@ -1139,19 +1155,23 @@ public abstract class DeploymentEngine implements DeploymentConstants {
         return (extensionMap != null) ? extensionMap.get(extension) : null;
     }
 
+    private static void destroyClassLoader(ClassLoader classLoader) {
+        if (classLoader instanceof DeploymentClassLoader) {
+            try {
+                ((DeploymentClassLoader)classLoader).close();
+            } catch (IOException ex) {
+                log.warn("Failed to destroy class loader " + classLoader, ex);
+            }
+        }
+    }
+
     /**
      * Clean up the mess
      */
     public void cleanup() {
-        if (axisConfig.getModuleClassLoader() instanceof JarFileClassLoader) {
-            ((JarFileClassLoader) axisConfig.getModuleClassLoader()).destroy();
-        }
-        if (axisConfig.getServiceClassLoader() instanceof JarFileClassLoader) {
-            ((JarFileClassLoader) axisConfig.getServiceClassLoader()).destroy();
-        }
-        if (axisConfig.getSystemClassLoader() instanceof JarFileClassLoader) {
-            ((JarFileClassLoader) axisConfig.getSystemClassLoader()).destroy();
-        }
+        destroyClassLoader(axisConfig.getModuleClassLoader());
+        destroyClassLoader(axisConfig.getServiceClassLoader());
+        destroyClassLoader(axisConfig.getSystemClassLoader());
         if (scheduler != null) {
             scheduler.cleanup(schedulerTask);
         }
@@ -1198,6 +1218,11 @@ public abstract class DeploymentEngine implements DeploymentConstants {
         if (configContext != null) {
             // Initialize the Deployer
             deployer.init(configContext);
+            for (Iterator<ServiceBuilderExtension> sbeItr = ((AbstractDeployer) deployer)
+                    .getServiceBuilderExtensions().iterator(); sbeItr.hasNext();) {
+                //init ServiceBuilderExtensions
+                sbeItr.next().init(configContext);
+            }
             if (!hotDeployment) {
                 //TBD
             }

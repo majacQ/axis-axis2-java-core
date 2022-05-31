@@ -25,7 +25,6 @@ import org.apache.axiom.om.OMFactory;
 import org.apache.axiom.soap.SOAP11Constants;
 import org.apache.axiom.soap.SOAP12Constants;
 import org.apache.axis2.AxisFault;
-import org.apache.axis2.classloader.JarFileClassLoader;
 import org.apache.axis2.Constants;
 import org.apache.axis2.jaxrs.JAXRSModel;
 import org.apache.axis2.context.ConfigurationContext;
@@ -44,15 +43,13 @@ import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.axis2.engine.Handler;
 import org.apache.axis2.engine.MessageReceiver;
 import org.apache.axis2.i18n.Messages;
-import org.apache.axis2.jsr181.JSR181Helper;
-import org.apache.axis2.jsr181.WebMethodAnnotation;
-import org.apache.axis2.jsr181.WebServiceAnnotation;
 import org.apache.axis2.util.JavaUtils;
 import org.apache.axis2.util.Loader;
 import org.apache.axis2.util.PolicyUtil;
 import org.apache.axis2.util.FaultyServiceData;
 import org.apache.axis2.wsdl.WSDLConstants;
 import org.apache.axis2.wsdl.WSDLUtil;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.neethi.PolicyComponent;
@@ -154,27 +151,31 @@ public class Utils {
     }
 
     public static URL[] getURLsForAllJars(URL url, File tmpDir) {
-        FileInputStream fin = null;
         InputStream in = null;
         ZipInputStream zin = null;
         try {
-            ArrayList array = new ArrayList();
+            ArrayList<URL> array = new ArrayList<URL>();
             in = url.openStream();
-            String fileName = url.getFile();
-            int index = fileName.lastIndexOf('/');
-            if (index != -1) {
-                fileName = fileName.substring(index + 1);
-            }
-            final File f = createTempFile(fileName, in, tmpDir);
+            if (url.getProtocol().equals("file")) {
+                array.add(url);
+            } else {
+                String fileName = url.getFile();
+                int index = fileName.lastIndexOf('/');
+                if (index != -1) {
+                    fileName = fileName.substring(index + 1);
+                }
+                final File f = createTempFile(fileName, in, tmpDir);
+                in.close();
 
-            fin = (FileInputStream)org.apache.axis2.java.security.AccessController
-                    .doPrivileged(new PrivilegedExceptionAction() {
-                        public Object run() throws FileNotFoundException {
-                            return new FileInputStream(f);
-                        }
-                    });
-            array.add(f.toURL());
-            zin = new ZipInputStream(fin);
+                in = org.apache.axis2.java.security.AccessController
+                        .doPrivileged(new PrivilegedExceptionAction<InputStream>() {
+                            public InputStream run() throws FileNotFoundException {
+                                return new FileInputStream(f);
+                            }
+                        });
+                array.add(f.toURI().toURL());
+            }
+            zin = new ZipInputStream(in);
 
             ZipEntry entry;
             String entryName;
@@ -189,20 +190,13 @@ public class Utils {
                     && entryName.toLowerCase().endsWith(".jar")) {
                     String suffix = entryName.substring(4);
                     File f2 = createTempFile(suffix, zin, tmpDir);
-                    array.add(f2.toURL());
+                    array.add(f2.toURI().toURL());
                 }
             }
-            return (URL[])array.toArray(new URL[array.size()]);
+            return array.toArray(new URL[array.size()]);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
-            if (fin != null) {
-                try {
-                    fin.close();
-                } catch (IOException e) {
-                    //
-                }
-            }
             if (in != null) {
                 try {
                     in.close();
@@ -323,14 +317,12 @@ public class Utils {
      */
     public static ClassLoader getClassLoader(final ClassLoader parent, File file, final boolean isChildFirstClassLoading)
             throws DeploymentException {
-        URLClassLoader classLoader;
-
         if (file == null)
             return null; // Shouldn't this just return the parent?
 
         try {
-            ArrayList urls = new ArrayList();
-            urls.add(file.toURL());
+            ArrayList<URL> urls = new ArrayList<URL>();
+            urls.add(file.toURI().toURL());
 
             // lower case directory name
             File libfiles = new File(file, "lib");
@@ -342,51 +334,30 @@ public class Utils {
 
             final URL urllist[] = new URL[urls.size()];
             for (int i = 0; i < urls.size(); i++) {
-                urllist[i] = (URL)urls.get(i);
+                urllist[i] = urls.get(i);
             }
-            classLoader = (URLClassLoader)AccessController
-                    .doPrivileged(new PrivilegedAction() {
-                        public Object run() {
-                            if (useJarFileClassLoader()) {
-                                return new JarFileClassLoader(urllist, parent);
-                            } else {
-                                return new DeploymentClassLoader(urllist, null, parent, isChildFirstClassLoading);
-                            }
-                        }
-                    });
-            return classLoader;
+            if (log.isDebugEnabled()) {
+                log.debug("Creating class loader with the following libraries: " + Arrays.asList(urllist));
+            }
+            return createDeploymentClassLoader(urllist, parent, isChildFirstClassLoading);
         } catch (MalformedURLException e) {
             throw new DeploymentException(e);
         }
     }
 
-    private static boolean useJarFileClassLoader() {
-        // The JarFileClassLoader was created to address a locking problem seen only on Windows platforms.
-        // It carries with it a slight performance penalty that needs to be addressed.  Rather than make
-        // *nix OSes carry this burden we'll engage the JarFileClassLoader for Windows or if the user 
-        // specifically requests it.
-        boolean useJarFileClassLoader;
-        if (System.getProperty("org.apache.axis2.classloader.JarFileClassLoader") == null) {
-            useJarFileClassLoader = System.getProperty("os.name").startsWith("Windows");
-        } else {
-            useJarFileClassLoader = Boolean.getBoolean("org.apache.axis2.classloader.JarFileClassLoader");
-        }
-        return useJarFileClassLoader;
-    }
-
-    private static boolean addFiles(ArrayList urls, final File libfiles)
+    private static boolean addFiles(ArrayList<URL> urls, final File libfiles)
             throws MalformedURLException {
-        Boolean exists = (Boolean)org.apache.axis2.java.security.AccessController
-                .doPrivileged(new PrivilegedAction() {
-                    public Object run() {
+        Boolean exists = org.apache.axis2.java.security.AccessController
+                .doPrivileged(new PrivilegedAction<Boolean>() {
+                    public Boolean run() {
                         return libfiles.exists();
                     }
                 });
         if (exists) {
-            urls.add(libfiles.toURL());
-            File jarfiles[] = (File[])org.apache.axis2.java.security.AccessController
-                    .doPrivileged(new PrivilegedAction() {
-                        public Object run() {
+            urls.add(libfiles.toURI().toURL());
+            File jarfiles[] = org.apache.axis2.java.security.AccessController
+                    .doPrivileged(new PrivilegedAction<File[]>() {
+                        public File[] run() {
                             return libfiles.listFiles();
                         }
                     });
@@ -394,7 +365,7 @@ public class Utils {
             while (i < jarfiles.length) {
                 File jarfile = jarfiles[i];
                 if (jarfile.getName().endsWith(".jar")) {
-                    urls.add(jarfile.toURL());
+                    urls.add(jarfile.toURI().toURL());
                 }
                 i++;
             }
@@ -522,16 +493,6 @@ public class Utils {
         }
         String opName = method.getName();
 
-        WebMethodAnnotation methodAnnon = JSR181Helper.INSTANCE.getWebMethodAnnotation(method);
-        if (methodAnnon != null) {
-            String action = methodAnnon.getAction();
-            if (action != null && !"".equals(action)) {
-                operation.setSoapAction(action);
-            }
-            if (methodAnnon.getOperationName() != null){
-                opName = methodAnnon.getOperationName();
-            }
-        }
 
         operation.setName(new QName(opName));
         return operation;
@@ -756,44 +717,12 @@ public class Utils {
     }
 
     /**
-     * Get names of all *.jar files inside the lib/ directory of a given jar URL
-     *
-     * @param url base URL of a JAR to search
-     * @return a List containing file names (Strings) of all files matching "[lL]ib/*.jar"
-     */
-    public static List findLibJars(URL url) {
-        ArrayList embedded_jars = new ArrayList();
-        try {
-            ZipInputStream zin = new ZipInputStream(url.openStream());
-            ZipEntry entry;
-            String entryName;
-            while ((entry = zin.getNextEntry()) != null) {
-                entryName = entry.getName();
-                /**
-                 * if the entry name start with /lib and ends with .jar add it
-                 * to the the arraylist
-                 */
-                if (entryName != null
-                    && (entryName.startsWith("lib/") || entryName
-                        .startsWith("Lib/"))
-                    && entryName.endsWith(".jar")) {
-                    embedded_jars.add(entryName);
-                }
-            }
-            zin.close();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return embedded_jars;
-    }
-
-    /**
      * Add the Axis2 lifecycle / session methods to a pre-existing list of names that will be
      * excluded when generating schemas.
      *
      * @param excludeList an ArrayList containing method names - we'll add ours to this.
      */
-    public static void addExcludeMethods(ArrayList<String> excludeList) {
+    public static void addExcludeMethods(List<String> excludeList) {
         excludeList.add("init");
         excludeList.add("setOperationContext");
         excludeList.add("startUp");
@@ -810,36 +739,8 @@ public class Utils {
                                 return Thread.currentThread().getContextClassLoader();
                             }
                         });
-        return createDeploymentClassLoader(new URL[]{serviceFile.toURL()},
-                                           contextClassLoader, new ArrayList(), isChildFirstClassLoading);
-    }
-
-    public static ClassLoader createClassLoader(ArrayList urls,
-                                                ClassLoader serviceClassLoader,
-                                                boolean extractJars,
-                                                File tmpDir,
-                                                boolean isChildFirstClassLoading) {
-        URL url = (URL)urls.get(0);
-        if (extractJars) {
-            try {
-                URL[] urls1 = Utils.getURLsForAllJars(url, tmpDir);
-                urls.remove(0);
-                urls.addAll(0, Arrays.asList(urls1));
-                URL[] urls2 = (URL[])urls.toArray(new URL[urls.size()]);
-                return createDeploymentClassLoader(urls2, serviceClassLoader,
-                                                   null, isChildFirstClassLoading);
-            } catch (Exception e) {
-                log
-                        .warn("Exception extracting jars into temporary directory : "
-                              + e.getMessage()
-                              + " : switching to alternate class loading mechanism");
-                log.debug(e.getMessage(), e);
-            }
-        }
-        List embedded_jars = Utils.findLibJars(url);
-        URL[] urls2 = (URL[])urls.toArray(new URL[urls.size()]);
-        return createDeploymentClassLoader(urls2, serviceClassLoader,
-                                           embedded_jars, isChildFirstClassLoading);
+        return createDeploymentClassLoader(new URL[]{serviceFile.toURI().toURL()},
+                                           contextClassLoader, isChildFirstClassLoading);
     }
 
     public static File toFile(URL url) throws UnsupportedEncodingException {
@@ -847,36 +748,26 @@ public class Utils {
         return new File(path.replace('/', File.separatorChar).replace('|', ':'));
     }
 
-    public static ClassLoader createClassLoader(URL[] urls,
+    public static ClassLoader createClassLoader(URL archiveUrl, URL[] extraUrls,
                                                 ClassLoader serviceClassLoader,
-                                                boolean extractJars,
                                                 File tmpDir,
                                                 boolean isChildFirstClassLoading) {
-        if (extractJars) {
-            try {
-                URL[] urls1 = Utils.getURLsForAllJars(urls[0], tmpDir);
-                return createDeploymentClassLoader(urls1, serviceClassLoader,
-                                                   null, isChildFirstClassLoading);
-            } catch (Exception e) {
-                log
-                        .warn("Exception extracting jars into temporary directory : "
-                              + e.getMessage()
-                              + " : switching to alternate class loading mechanism");
-                log.debug(e.getMessage(), e);
-            }
+        List<URL> urls = new ArrayList<>();
+        urls.addAll(Arrays.asList(Utils.getURLsForAllJars(archiveUrl, tmpDir)));
+        if (extraUrls != null) {
+            urls.addAll(Arrays.asList(extraUrls));
         }
-        List embedded_jars = Utils.findLibJars(urls[0]);
-        return createDeploymentClassLoader(urls, serviceClassLoader,
-                                           embedded_jars, isChildFirstClassLoading);
+        return createDeploymentClassLoader(urls.toArray(new URL[urls.size()]), serviceClassLoader,
+                                           isChildFirstClassLoading);
     }
 
     private static DeploymentClassLoader createDeploymentClassLoader(
             final URL[] urls, final ClassLoader serviceClassLoader,
-            final List embeddedJars, final boolean isChildFirstClassLoading) {
-        return (DeploymentClassLoader)AccessController
-                .doPrivileged(new PrivilegedAction() {
-                    public Object run() {
-                        return new DeploymentClassLoader(urls, embeddedJars,
+            final boolean isChildFirstClassLoading) {
+        return AccessController
+                .doPrivileged(new PrivilegedAction<DeploymentClassLoader>() {
+                    public DeploymentClassLoader run() {
+                        return new DeploymentClassLoader(urls,
                                                          serviceClassLoader, isChildFirstClassLoading);
                     }
                 });
@@ -895,11 +786,11 @@ public class Utils {
         if (excludeBeanProperty != null) {
             OMElement parameterElement = excludeBeanProperty
                     .getParameterElement();
-            Iterator bneasItr = parameterElement.getChildrenWithName(new QName(
+            Iterator<OMElement> bneasItr = parameterElement.getChildrenWithName(new QName(
                     "bean"));
             ExcludeInfo excludeInfo = new ExcludeInfo();
             while (bneasItr.hasNext()) {
-                OMElement bean = (OMElement)bneasItr.next();
+                OMElement bean = bneasItr.next();
                 String clazz = bean.getAttributeValue(new QName(
                         DeploymentConstants.TAG_CLASS_NAME));
                 String excludePropertees = bean.getAttributeValue(new QName(
@@ -918,32 +809,7 @@ public class Utils {
         return file.getName();
     }
 
-    /**
-     * The util method to prepare the JSR 181 annotated service name from given annotation or for
-     * defaults JSR 181 specifies that the in javax.jws.WebService the parameter serviceName
-     * contains the wsdl:service name to mapp. If its not available then the default will be Simple
-     * name of the class + "Service"
-     *
-     * @param serviceClass the service Class
-     * @param serviceAnnotation a WebService annotation, or null
-     * @return String version of the ServiceName according to the JSR 181 spec
-     */
-    public static String getAnnotatedServiceName(Class serviceClass, WebServiceAnnotation serviceAnnotation) {
-        String serviceName = "";
-        if (serviceAnnotation != null && serviceAnnotation.getServiceName() != null) {
-            serviceName = serviceAnnotation.getServiceName();
-        }
-        if (serviceName.equals("")) {
-            serviceName = serviceClass.getName();
-            int firstChar = serviceName.lastIndexOf('.') + 1;
-            if (firstChar > 0) {
-                serviceName = serviceName.substring(firstChar);
-            }
-            serviceName += "Service";
-        }
-        return serviceName;
-    }
-
+    
     public static void addEndpointsToService(AxisService axisService)
             throws AxisFault {
 
@@ -1306,10 +1172,10 @@ public class Utils {
                 policyComponents.add(policyRef);
             }
 
-            for (Iterator policySubjects = appliesToElem
+            for (Iterator<OMElement> policySubjects = appliesToElem
                     .getChildrenWithName(new QName("policy-subject")); policySubjects
                     .hasNext();) {
-                OMElement policySubject = (OMElement)policySubjects.next();
+                OMElement policySubject = policySubjects.next();
                 String identifier = policySubject.getAttributeValue(new QName(
                         "identifier"));
 
@@ -1995,25 +1861,37 @@ public class Utils {
      *             if an error occurs while scanning the file
      */
     public static List<String> getListOfClasses(DeploymentFileData deploymentFileData) throws DeploymentException {
-        try {
-            FileInputStream fin = new FileInputStream(deploymentFileData.getAbsolutePath());
-            try {
-                ZipInputStream zin = new ZipInputStream(fin);
+        try {           
+            List<String> classList = null;
+            if(DeploymentFileData.isServiceArchiveFile(deploymentFileData.getAbsolutePath())){
+                FileInputStream fin = new FileInputStream(deploymentFileData.getAbsolutePath());
                 try {
-                    ZipEntry entry;
-                    List<String> classList = new ArrayList<String>();
-                    while ((entry = zin.getNextEntry()) != null) {
-                        String name = entry.getName();
-                        if (name.endsWith(".class")) {
-                            classList.add(getClassNameFromResourceName(name));
+                    ZipInputStream zin = new ZipInputStream(fin);
+                    try {
+                        ZipEntry entry;
+                        classList = new ArrayList<String>();
+                        while ((entry = zin.getNextEntry()) != null) {
+                            String name = entry.getName();
+                            if (name.endsWith(".class")) {
+                                classList.add(getClassNameFromResourceName(name));
+                            }
                         }
+                        return classList;
+                    } finally {
+                        zin.close();
                     }
-                    return classList;
                 } finally {
-                    zin.close();
+                    fin.close();
+                }                
+            } else {
+                File directory = deploymentFileData.getFile();
+                classList = new ArrayList<String>();
+                for(Iterator<File> fileItr= FileUtils.iterateFiles(directory, new String[]{"class"}, true); fileItr.hasNext();){
+                    String fileName = fileItr.next().getPath();
+                    String className = getClassNameFromResourceName(fileName.replace(directory.getPath(), "").substring(1));                   
+                    classList.add(className);                    
                 }
-            } finally {
-                fin.close();
+                return classList;             
             }
         } catch (IOException e) {
             log.debug(Messages.getMessage(DeploymentErrorMsgs.DEPLOYING_EXCEPTION, e.getMessage()), e);

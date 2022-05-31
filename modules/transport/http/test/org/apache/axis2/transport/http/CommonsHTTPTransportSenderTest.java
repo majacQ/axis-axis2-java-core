@@ -18,11 +18,13 @@
  */
 package org.apache.axis2.transport.http;
 
+import static com.google.common.truth.Truth.assertAbout;
+import static org.apache.axiom.truth.xml.XMLTruth.xml;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.mail.MessagingException;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.namespace.QName;
 
@@ -48,27 +50,28 @@ import org.apache.axis2.transport.TransportSender;
 import org.apache.axis2.transport.http.mock.MockAxisHttpResponse;
 import org.apache.axis2.transport.http.mock.MockHttpServletResponse;
 import org.apache.axis2.transport.http.mock.MockHTTPResponse;
-import org.apache.commons.httpclient.HttpMethod;
-import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.http.ProtocolVersion;
 import org.apache.http.RequestLine;
 import org.apache.http.message.BasicRequestLine;
 
-public class CommonsHTTPTransportSenderTest extends TestCase  {
+public abstract class CommonsHTTPTransportSenderTest extends TestCase  {
+    
+    protected abstract TransportSender getTransportSender();
 
     public void testInvokeWithServletBasedOutTransportInfo() throws Exception {
         MockHTTPResponse httpResponse = new MockHttpServletResponse();
         ServletBasedOutTransportInfo info = new ServletBasedOutTransportInfo(
                 (HttpServletResponse) httpResponse);
         SOAPEnvelope envelope = getEnvelope();
-        httpResponse = configAndRun(httpResponse, info, null);
+        httpResponse = configAndRun(httpResponse, info, null, getTransportSender());
 
         assertEquals("Not the expected Header value", "application/xml", httpResponse.getHeaders()
                 .get("Content-Type"));
         assertEquals("Not the expected Header value", "custom-value", httpResponse.getHeaders()
                 .get("Custom-header"));
-        assertEquals("Not the expected body content", envelope.toString().replace("utf", "UTF"),
-                new String(httpResponse.getByteArrayOutputStream().toByteArray()));
+        assertAbout(xml())
+                .that(new String(httpResponse.getByteArrayOutputStream().toByteArray()))
+                .hasSameContentAs(envelope.toString());
     }
     
     public void testInvokeWithAxisHttpResponseImpl() throws Exception {
@@ -76,39 +79,28 @@ public class CommonsHTTPTransportSenderTest extends TestCase  {
         MockHTTPResponse httpResponse = new MockAxisHttpResponse(line);
         SOAPEnvelope envelope = getEnvelope();
         httpResponse = (MockAxisHttpResponse) configAndRun(httpResponse,
-                (OutTransportInfo) httpResponse, null);
+                (OutTransportInfo) httpResponse, null, getTransportSender());
 
         assertEquals("Not the expected Header value", "application/xml", httpResponse.getHeaders()
                 .get("Content-Type"));
         assertEquals("Not the expected Header value", "custom-value", httpResponse.getHeaders()
                 .get("Custom-header"));
-        assertEquals("Not the expected body content", envelope.toString().replace("utf", "UTF"),
-                new String(httpResponse.getByteArrayOutputStream().toByteArray()));
+        assertAbout(xml())
+                .that(new String(httpResponse.getByteArrayOutputStream().toByteArray()))
+                .hasSameContentAs(envelope.toString());
     }
 
-    public void testCleanup() throws AxisFault {
-        TransportSender sender = new CommonsHTTPTransportSender();
-        MessageContext msgContext = new MessageContext();
-        HttpMethod httpMethod = new GetMethod();
-        msgContext.setProperty(HTTPConstants.HTTP_METHOD, httpMethod);
-        assertNotNull("HttpMethod can not be null",
-                msgContext.getProperty(HTTPConstants.HTTP_METHOD));
-        sender.cleanup(msgContext);
-        assertNull("HttpMethod should be null", msgContext.getProperty(HTTPConstants.HTTP_METHOD));
-
-    }
-    
     public void testInit() throws AxisFault {
         ConfigurationContext confContext = ConfigurationContextFactory
                 .createEmptyConfigurationContext();
         TransportOutDescription transportOut = new TransportOutDescription("http");
-        TransportSender sender = new CommonsHTTPTransportSender();
+        TransportSender sender = getTransportSender();
         sender.init(confContext, transportOut);
 
     }
 
     public static MockHTTPResponse configAndRun(MockHTTPResponse outResponse,
-            OutTransportInfo outTransportInfo, String epr) throws Exception {
+            OutTransportInfo outTransportInfo, String epr, TransportSender sender) throws Exception {
         MockHTTPResponse response = outResponse;
         ConfigurationContext confContext = ConfigurationContextFactory
                 .createEmptyConfigurationContext();
@@ -116,8 +108,7 @@ public class CommonsHTTPTransportSenderTest extends TestCase  {
         Parameter param = new Parameter(HTTPConstants.OMIT_SOAP_12_ACTION, false);
         SOAPEnvelope envelope = getEnvelope();
         MessageContext msgContext = new MessageContext();
-
-        TransportSender sender = new CommonsHTTPTransportSender();
+        
         transportOut.addParameter(param);
         // create dummy SOAPEnvelope
         msgContext.setEnvelope(envelope);
@@ -143,7 +134,7 @@ public class CommonsHTTPTransportSenderTest extends TestCase  {
 
     }
     
-    static SOAPEnvelope getEnvelope() throws IOException, MessagingException {
+    static SOAPEnvelope getEnvelope() throws IOException {
         SOAPFactory soapFac = OMAbstractFactory.getSOAP11Factory();
         OMFactory omFac = OMAbstractFactory.getOMFactory();
         SOAPEnvelope enp = soapFac.createSOAPEnvelope();

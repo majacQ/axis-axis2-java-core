@@ -20,14 +20,14 @@
 package org.apache.axis2.saaj;
 
 import junit.framework.Assert;
-import org.apache.axiom.attachments.utils.IOUtils;
-import org.apache.axiom.om.util.Base64;
+import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.httpclient.DefaultHttpMethodRetryHandler;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpException;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.params.HttpMethodParams;
+import org.apache.commons.io.IOUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -277,10 +277,10 @@ public class AttachmentTest extends Assert {
             //Create InputStream from DataHandler's InputStream
             InputStream is = dh.getInputStream();
 
-            byte buf[] = IOUtils.getStreamAsByteArray(is);
+            byte buf[] = IOUtils.toByteArray(is);
             //Setting Content via InputStream for image/jpeg mime type
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            Base64.encode(buf, 0, buf.length, bos);
+            Base64Utils.encode(buf, 0, buf.length, bos);
             buf = bos.toByteArray();
             InputStream stream = new ByteArrayInputStream(buf);
             ap.setBase64Content(stream, "image/jpeg");

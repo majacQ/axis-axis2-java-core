@@ -54,50 +54,62 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.stream.XMLStreamException;
 
 /**
+ * <p>
  * Standard Axis2 service Deployer which use services.xml file to build
  * services. ServiceDeployer can be used with Axis2 archive (.aar) or exploded
  * directory structure. Some of the example formats given below.
+ * </p>
+ * <p>Examples : <p>
+ *        <ul>
+ *          <li>repository/services/SimpleService.aar/meta-inf/services.xml</li>
+ *          <li>repository/services/SimpleService/meta-inf/services.xml</li>
+ *          <li>WEB-INF/services/SimpleService.aar/meta-inf/services.xml</li>
+ *          <li>WEB-INF/services/SimpleService/meta-inf/services.xml</li>
+ *       </ul>
  * 
- * Examples :
- * 
- *          repository/services/SimpleService.aar/meta-inf/services.xml
- *          repository/services/SimpleService/meta-inf/services.xml
- *          WEB-INF/services/SimpleService.aar/meta-inf/services.xml
- *          WEB-INF/services/SimpleService/meta-inf/services.xml
- * 
- * Further ServiceDeployer can be used to deploy services from a remote
- * repository or within a JAR file. In this case service files accessed through URLs.
+ * <p>Further ServiceDeployer can be used to deploy services from a remote
+ * repository or load a repository from a JAR file. In this case service files access through URLs.
  * To deploy services from a remote repository or JAR file it is expected to
- * present service/services.list file which contains names of services.
+ * present service/services.list file which contains names of services.</p>
  * 
- * Examples : jar:file:/home/resources/repo.jar!/repo/services/services.list may contains following
- * list of service.
- * 
- *          StudentService.aar 
- *          SimpleService.aar
- * 
- * There are several approaches available to set repository URL to Axis2 run
+ * <p>Example :</p> <p>jar:file:/home/resources/repo.jar!/repo/services/services.list may contains following
+ * list of service.</p>
+ *          <ul>
+ *          <li>StudentService.aar</li>
+ *          <li>SimpleService.aar</li>
+ *          </ul>
+ * <p>There are several approaches available to set repository URL to Axis2 run
  * time. As an example one can provide repository URL as a init-param of
- * AxisServlet. Some of the examples given below.
- * 
- * Example -1 : 
- *                 <init-param> 
+ * AxisServlet. Some of the examples given below.</p>
+ * <ul>
+ * <li>
+ * <p>Example -1 : </p>
+ *      <pre>
+ *                  {@code        <init-param> 
  *                      <param-name>axis2.repository.url</param-name>
  *                      <param-value>http://localhost/repo/</param-value> 
- *                 </init-param>
- * 
- * Example -2 : 
- *                 <init-param> 
+ *                 </init-param> }
+ *      </pre>
+ * </li>
+ * <li>
+ * <p>Example -2 : </p>
+ *     <pre> 
+ *                  {@code         <init-param> 
  *                      <param-name>axis2.repository.url</param-name>
- *                      <param-value>jar:file:/home/resources/repo.jar!/repo/</param-value> </init-param>
+ *                      <param-value>jar:file:/home/resources/repo.jar!/repo/</param-value> 
+ *                  </init-param>  } 
+ *    </pre>
+ * </li>
+ * </ul>
  * 
- * NOTE - It is discouraged to use above services.list based deployment approach
+ * <p><b>NOTE</b> - It is discouraged to use above services.list based deployment approach
  * because it does not support hot-deployment, hot-update and some of other
- * important deployment features as well. 
+ * important deployment features as well. </p>
  * 
  */
 public class ServiceDeployer extends AbstractDeployer {
@@ -131,29 +143,25 @@ public class ServiceDeployer extends AbstractDeployer {
                                               axisConfig.getServiceClassLoader(),
                     (File)axisConfig.getParameterValue(Constants.Configuration.ARTIFACTS_TEMP_DIR),
                     axisConfig.isChildFirstClassLoading());
-            HashMap<String,AxisService> wsdlservice = archiveReader.processWSDLs(deploymentFileData);
-            if (wsdlservice != null && wsdlservice.size() > 0) {
-                for (AxisService service : wsdlservice.values()) {
-                    Iterator<AxisOperation> operations = service.getOperations();
-                    while (operations.hasNext()) {
-                        AxisOperation axisOperation = operations.next();
-                        axisConfig.getPhasesInfo().setOperationPhases(axisOperation);
-                    }
-                }
-            }
+            OMElement serviceMetaData = archiveReader.buildServiceDescription(
+                    deploymentFileData.getAbsolutePath(), configCtx, isDirectory);
+            deploymentFileData.setServiceMetaData(serviceMetaData);
+            Map<String, AxisService> serviceMap = executeServiceBuilderExtensions(
+                  deploymentFileData, configCtx);        
+            
             AxisServiceGroup serviceGroup = new AxisServiceGroup(axisConfig);
             serviceGroup.setServiceGroupClassLoader(deploymentFileData.getClassLoader());
             ArrayList<AxisService> serviceList = archiveReader.processServiceGroup(
-                    deploymentFileData.getAbsolutePath(), deploymentFileData,
-                    serviceGroup, isDirectory, wsdlservice,
+                    serviceMetaData, deploymentFileData,
+                    serviceGroup, isDirectory, serviceMap,
                     configCtx);
-            URL location = deploymentFileData.getFile().toURL();
+            URL location = deploymentFileData.getFile().toURI().toURL();
 
             // Add the hierarchical path to the service group
             if (location != null) {
                 String serviceHierarchy = Utils.getServiceHierarchy(location.getPath(),
                         this.directory);
-                if (!"".equals(serviceHierarchy)) {
+                if (serviceHierarchy != null && !"".equals(serviceHierarchy)) {
                     serviceGroup.setServiceGroupName(serviceHierarchy
                             + serviceGroup.getServiceGroupName());
                     for (AxisService axisService : serviceList) {
@@ -238,17 +246,10 @@ public class ServiceDeployer extends AbstractDeployer {
         }
         AxisServiceGroup serviceGroup = new AxisServiceGroup();
         StringWriter errorWriter = new StringWriter();
-        int index = servicesURL.getPath().lastIndexOf(File.separator);
-         String serviceFile;
-         if(index > 0){
-             serviceFile = servicesURL.getPath().substring(index);
-         } else {
-             serviceFile = servicesURL.getPath();
-         }
          ArrayList<AxisService> servicelist =
          populateService(serviceGroup,
          servicesURL,
-         serviceFile.substring(0, serviceFile.indexOf(".aar")));
+         DescriptionBuilder.getShortFileName(deploymentFileData.getName()));
          try {
             DeploymentEngine.addServiceGroup(serviceGroup, servicelist, servicesURL, null,
              axisConfig);
@@ -291,8 +292,8 @@ public class ServiceDeployer extends AbstractDeployer {
         try {
             serviceGroup.setServiceGroupName(serviceName);
             ClassLoader serviceClassLoader = Utils
-                    .createClassLoader(new URL[] { servicesURL }, axisConfig
-                            .getServiceClassLoader(), true, (File) axisConfig
+                    .createClassLoader(servicesURL, null, axisConfig
+                            .getServiceClassLoader(), (File) axisConfig
                             .getParameterValue(Constants.Configuration.ARTIFACTS_TEMP_DIR),
                             axisConfig.isChildFirstClassLoading());
             String metainf = "meta-inf";

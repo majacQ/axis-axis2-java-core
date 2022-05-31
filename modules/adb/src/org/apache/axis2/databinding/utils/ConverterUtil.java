@@ -20,10 +20,9 @@
 package org.apache.axis2.databinding.utils;
 
 import org.apache.axiom.attachments.ByteArrayDataSource;
-import org.apache.axiom.attachments.utils.IOUtils;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.util.AXIOMUtil;
-import org.apache.axiom.om.util.Base64;
+import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.axiom.util.stax.XMLStreamReaderUtils;
 import org.apache.axiom.util.stax.XMLStreamWriterUtils;
 import org.apache.axis2.databinding.ADBBean;
@@ -59,6 +58,7 @@ import org.apache.axis2.databinding.types.UnsignedLong;
 import org.apache.axis2.databinding.types.UnsignedShort;
 import org.apache.axis2.databinding.types.Year;
 import org.apache.axis2.databinding.types.YearMonth;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -333,6 +333,10 @@ public class ConverterUtil {
         return o.toString();
     }
 
+    public static String convertToString(BigDecimal o) {
+        return o.toPlainString();
+    }
+
     public static String convertToString(Double o) {
         return o.toString();
     }
@@ -350,7 +354,7 @@ public class ConverterUtil {
     }
 
     public static String convertToString(byte[] bytes) {
-        return Base64.encode(bytes);
+        return Base64Utils.encode(bytes);
     }
 
     public static String convertToString(javax.activation.DataHandler handler) {
@@ -543,7 +547,7 @@ public class ConverterUtil {
             return null;
         }
         ByteArrayDataSource byteArrayDataSource = new ByteArrayDataSource(
-                Base64.decode(s)
+                Base64Utils.decode(s)
         );
         return new DataHandler(byteArrayDataSource);
     }
@@ -672,7 +676,7 @@ public class ConverterUtil {
 
 
     public static NormalizedString convertToNormalizedString(String s) {
-        if ((s == null) || s.equals("")){
+        if ((s == null)){
             return null;
         }
         return new NormalizedString(s);
@@ -916,6 +920,7 @@ public class ConverterUtil {
         int second = 0;
         long miliSecond = 0;
         int timeZoneOffSet = TimeZone.getDefault().getRawOffset();
+        boolean haveTimeZone;
 
 
         if ((source != null) && (source.length() >= 19)) {
@@ -935,18 +940,22 @@ public class ConverterUtil {
 
             int milliSecondPartLength = 0;
 
-            if (source.length() > 19)  {
+            if (source.length() == 19) {
+                haveTimeZone = false;
+            } else {
                 String rest = source.substring(19);
                 if (rest.startsWith(".")) {
                     // i.e this have the ('.'s+) part
                     if (rest.endsWith("Z")) {
                         // this is in gmt time zone
+                        haveTimeZone = true;
                         timeZoneOffSet = 0;
                         calendar.setTimeZone(TimeZone.getTimeZone("GMT"));
                         miliSecond = Integer.parseInt(rest.substring(1, rest.lastIndexOf("Z")));
                         milliSecondPartLength = rest.substring(1,rest.lastIndexOf("Z")).trim().length();
                     } else if ((rest.lastIndexOf("+") > 0) || (rest.lastIndexOf("-") > 0)) {
                         // this is given in a general time zione
+                        haveTimeZone = true;
                         String timeOffSet = null;
                         if (rest.lastIndexOf("+") > 0) {
                             timeOffSet = rest.substring(rest.lastIndexOf("+") + 1);
@@ -972,6 +981,7 @@ public class ConverterUtil {
 
                     } else {
                         // i.e it does not have time zone
+                        haveTimeZone = false;
                         miliSecond = Integer.parseInt(rest.substring(1));
                         milliSecondPartLength = rest.substring(1).trim().length();
                     }
@@ -980,9 +990,11 @@ public class ConverterUtil {
                     if (rest.startsWith("Z")) {
                         calendar.setTimeZone(TimeZone.getTimeZone("GMT"));
                         // this is in gmt time zone
+                        haveTimeZone = true;
                         timeZoneOffSet = 0;
                     } else if (rest.startsWith("+") || rest.startsWith("-")) {
                         // this is given in a general time zione
+                        haveTimeZone = true;
                         if (rest.charAt(3) != ':') {
                             throw new RuntimeException("invalid time zone format (" + source
                                     + ") without : at correct place");
@@ -1017,7 +1029,8 @@ public class ConverterUtil {
             calendar.set(Calendar.MILLISECOND, (int)miliSecond);
             calendar.set(Calendar.ZONE_OFFSET, timeZoneOffSet);
             // set the day light offset only if the time zone is present
-            if (source.length() > 19){
+            // set the day light offset only if the time zone is present
+            if (haveTimeZone) {
                 calendar.set(Calendar.DST_OFFSET, 0);
             }
 
@@ -1273,7 +1286,9 @@ public class ConverterUtil {
      * @return 0 if equal , + value if greater than , - value if less than
      */
     public static int compare(int intValue, String value) {
-        return intValue - Integer.parseInt(value);
+        int other = Integer.parseInt(value);
+        return intValue < other ? -1 : (intValue == other ? 0 : 1);
+
     }
 
     /**
@@ -1377,8 +1392,8 @@ public class ConverterUtil {
 				return "";
 			}
 			inStream = dataHandler.getDataSource().getInputStream();
-			byte[] data = IOUtils.getStreamAsByteArray(inStream);
-			return Base64.encode(data);
+			byte[] data = IOUtils.toByteArray(inStream);
+			return Base64Utils.encode(data);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 

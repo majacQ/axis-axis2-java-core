@@ -59,9 +59,9 @@
         protected org.apache.axis2.description.AxisOperation[] _operations;
 
         //hashmaps to keep the fault mapping
-        private java.util.HashMap faultExceptionNameMap = new java.util.HashMap();
-        private java.util.HashMap faultExceptionClassNameMap = new java.util.HashMap();
-        private java.util.HashMap faultMessageMap = new java.util.HashMap();
+        private java.util.Map&lt;org.apache.axis2.client.FaultMapKey,String> faultExceptionNameMap = new java.util.HashMap&lt;org.apache.axis2.client.FaultMapKey,String>();
+        private java.util.Map&lt;org.apache.axis2.client.FaultMapKey,String> faultExceptionClassNameMap = new java.util.HashMap&lt;org.apache.axis2.client.FaultMapKey,String>();
+        private java.util.Map&lt;org.apache.axis2.client.FaultMapKey,String> faultMessageMap = new java.util.HashMap&lt;org.apache.axis2.client.FaultMapKey,String>();
 
         private static int counter = 0;
 
@@ -315,7 +315,7 @@
                     <xsl:for-each select="fault/param[@type!='']">
                         ,<xsl:value-of select="@name"/>
                     </xsl:for-each>{
-              org.apache.axis2.context.MessageContext _messageContext = null;
+              org.apache.axis2.context.MessageContext _messageContext = new org.apache.axis2.context.MessageContext();
               try{
                org.apache.axis2.client.OperationClient _operationClient = _serviceClient.createClient(_operations[<xsl:value-of select="position()-1"/>].getName());
               _operationClient.getOptions().setAction("<xsl:value-of select="$soapAction"/>");
@@ -325,9 +325,6 @@
               <xsl:for-each select="optionParam">
                   addPropertyToOperationClient(_operationClient,<xsl:value-of select="@name"/>,<xsl:value-of select="@value"/>);
               </xsl:for-each>
-
-              // create a message context
-              _messageContext = new org.apache.axis2.context.MessageContext();
 
               <!--todo if the stub was generated with unwrapping, wrap all parameters into a single element-->
 
@@ -348,22 +345,19 @@
                                                 wrapped parameters -->
                                             <!-- unwrapping takes place only if the back word compatiblity is off. if -b on
                                              then we do not unwrapp and only remove the top element -->
-                                           <xsl:variable name="inputElementType" select="input/param[@location='body' and @type!='']/@type"></xsl:variable>
-                                           <xsl:variable name="inputElementComplexType" select="input/param[@location='body' and @type!='']/@complextype"></xsl:variable>
-                                           <xsl:variable name="opName" select="input/param[@location='body' and @type!='']/@opname"></xsl:variable>
-
+                                            <xsl:variable name="param" select="input/param[@location='body' and @type!='']"/>
                                             <xsl:choose>
-                                                <xsl:when test="(($isbackcompatible='true') and (string-length(normalize-space($inputElementComplexType)) > 0))">
+                                                <xsl:when test="(($isbackcompatible='true') and (string-length(normalize-space($param/@complextype)) > 0))">
                                                      <!-- there are no unwrapped parameters - go ahead and use the normal wrapped codegen-->
                                                     env = toEnvelope(getFactory(_operationClient.getOptions().getSoapVersionURI()),
-                                                    wrap<xsl:value-of select="$opName"/>(<xsl:value-of select="input/param[@location='body' and @type!='']/@name"/>),
+                                                    wrap<xsl:value-of select="$param/@opname"/>(<xsl:value-of select="$param/@name"/>),
                                                     optimizeContent(new javax.xml.namespace.QName("<xsl:value-of select="$method-ns"/>",
                                                     "<xsl:value-of select="$method-name"/>")));
                                                 </xsl:when>
                                                 <xsl:when test="($isUnwrapParameters) and not($isbackcompatible='true')">
-                                                    <xsl:value-of select="$inputElementType"/><xsl:text> </xsl:text>dummyWrappedType = null;
+                                                    <xsl:value-of select="$param/@type"/><xsl:text> </xsl:text>dummyWrappedType = null;
                                                     env = toEnvelope(getFactory(_operationClient.getOptions().getSoapVersionURI()),
-                                                    <xsl:for-each select="input/param[@location='body' and @type!='']/param">
+                                                    <xsl:for-each select="$param/param">
                                                         <xsl:value-of select="@name"/>,
                                                     </xsl:for-each>dummyWrappedType,
                                                     optimizeContent(new javax.xml.namespace.QName("<xsl:value-of select="$method-ns"/>",
@@ -372,10 +366,12 @@
                                                 <xsl:otherwise>
                                                     <!-- there are no unwrapped parameters - go ahead and use the normal wrapped codegen-->
                                                     env = toEnvelope(getFactory(_operationClient.getOptions().getSoapVersionURI()),
-                                                    <xsl:value-of select="input/param[@location='body' and @type!='']/@name"/>,
-                                                    optimizeContent(new javax.xml.namespace.QName("<xsl:value-of select="$method-ns"/>",
-                                                    "<xsl:value-of select="$method-name"/>")), new javax.xml.namespace.QName("<xsl:value-of select="$method-ns"/>",
-                                                    "<xsl:value-of select="$method-name"/>"));
+                                                    <xsl:value-of select="$param/@name"/>,
+                                                    optimizeContent(new javax.xml.namespace.QName("<xsl:value-of select="$method-ns"/>", "<xsl:value-of select="$method-name"/>")),
+                                                    <xsl:choose>
+                                                        <xsl:when test="$param/qname">new javax.xml.namespace.QName("<xsl:value-of select="$param/qname/@nsuri"/>", "<xsl:value-of select="$param/qname/@localname"/>")</xsl:when>
+                                                        <xsl:otherwise>null</xsl:otherwise>
+                                                    </xsl:choose>);
                                                 </xsl:otherwise>
                                             </xsl:choose>
                                         </xsl:when>
@@ -384,9 +380,6 @@
                                         </xsl:otherwise>
                                     </xsl:choose>
 
-                                   <xsl:if test="count(input/param[@location='soap_header']) &gt; 0">
-                                               env.build();
-                                    </xsl:if>
                                     <xsl:for-each select="input/param[@location='soap_header']">
                                         // add the children only if the parameter is not null
                                         if (<xsl:value-of select="@name"/>!=null){
@@ -487,7 +480,7 @@
                                 java.lang.Object object = fromOM(
                                              _returnEnv.getBody().getFirstElement() ,
                                              <xsl:value-of select="$outputtype"/>.class);
-
+                                org.apache.axis2.transport.TransportUtils.detachInputStream(_returnMessageContext);
                                <xsl:choose>
                                    <xsl:when test="$outputparamcount=1">
                                         return get<xsl:value-of select="$outputparamshorttype"/><xsl:value-of
@@ -520,12 +513,12 @@
                 if (faultExceptionNameMap.containsKey(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"))){
                     //make the fault by reflection
                     try{
-                        java.lang.String exceptionClassName = (java.lang.String)faultExceptionClassNameMap.get(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"));
+                        java.lang.String exceptionClassName = faultExceptionClassNameMap.get(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"));
                         java.lang.Class exceptionClass = java.lang.Class.forName(exceptionClassName);
-                        java.lang.reflect.Constructor constructor = exceptionClass.getConstructor(String.class);
+                        java.lang.reflect.Constructor constructor = exceptionClass.getConstructor(java.lang.String.class);
                         java.lang.Exception ex = (java.lang.Exception) constructor.newInstance(f.getMessage());
                         //message class
-                        java.lang.String messageClassName = (java.lang.String)faultMessageMap.get(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"));
+                        java.lang.String messageClassName = faultMessageMap.get(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"));
                         java.lang.Class messageClass = java.lang.Class.forName(messageClassName);
                         java.lang.Object messageObject = fromOM(faultElt,messageClass);
                         java.lang.reflect.Method m = exceptionClass.getMethod("setFaultMessage",
@@ -638,13 +631,13 @@
                                         <xsl:when test="$inputcount=1">
                                             <!-- Even when the parameters are 1 we have to see whether we have the
                                                 wrapped parameters -->
-                                            <xsl:variable name="inputElementType" select="input/param[@location='body' and @type!='']/@type"></xsl:variable>
+                                            <xsl:variable name="param" select="input/param[@location='body' and @type!='']"></xsl:variable>
 
                                             <xsl:choose>
                                                 <xsl:when test="$isUnwrapParameters">
-                                                    <xsl:value-of select="$inputElementType"/><xsl:text> </xsl:text>dummyWrappedType = null;
+                                                    <xsl:value-of select="$param/@type"/><xsl:text> </xsl:text>dummyWrappedType = null;
                                                     env = toEnvelope(getFactory(_operationClient.getOptions().getSoapVersionURI()),
-                                                    <xsl:for-each select="input/param[@location='body' and @type!='']/param">
+                                                    <xsl:for-each select="$param/param">
                                                         <xsl:value-of select="@name"/>,
                                                     </xsl:for-each> dummyWrappedType,
                                                     optimizeContent(new javax.xml.namespace.QName("<xsl:value-of select="$method-ns"/>",
@@ -653,10 +646,12 @@
                                                 <xsl:otherwise>
                                                     <!-- there are no unwrapped parameters - go ahead and use the normal wrapped codegen-->
                                                     env = toEnvelope(getFactory(_operationClient.getOptions().getSoapVersionURI()),
-                                                    <xsl:value-of select="input/param[@location='body' and @type!='']/@name"/>,
-                                                    optimizeContent(new javax.xml.namespace.QName("<xsl:value-of select="$method-ns"/>",
-                                                    "<xsl:value-of select="$method-name"/>")), new javax.xml.namespace.QName("<xsl:value-of select="$method-ns"/>",
-                                                    "<xsl:value-of select="$method-name"/>"));
+                                                    <xsl:value-of select="$param/@name"/>,
+                                                    optimizeContent(new javax.xml.namespace.QName("<xsl:value-of select="$method-ns"/>", "<xsl:value-of select="$method-name"/>")),
+                                                    <xsl:choose>
+                                                        <xsl:when test="$param/qname">new javax.xml.namespace.QName("<xsl:value-of select="$param/qname/@nsuri"/>", "<xsl:value-of select="$param/qname/@localname"/>")</xsl:when>
+                                                        <xsl:otherwise>null</xsl:otherwise>
+                                                    </xsl:choose>);
                                                 </xsl:otherwise>
                                             </xsl:choose>
                                         </xsl:when>
@@ -788,12 +783,12 @@
 										if (faultExceptionNameMap.containsKey(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"))){
 											//make the fault by reflection
 											try{
-													java.lang.String exceptionClassName = (java.lang.String)faultExceptionClassNameMap.get(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"));
+													java.lang.String exceptionClassName = faultExceptionClassNameMap.get(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"));
 													java.lang.Class exceptionClass = java.lang.Class.forName(exceptionClassName);
-													java.lang.reflect.Constructor constructor = exceptionClass.getConstructor(String.class);
+													java.lang.reflect.Constructor constructor = exceptionClass.getConstructor(java.lang.String.class);
                                                     java.lang.Exception ex = (java.lang.Exception) constructor.newInstance(f.getMessage());
 													//message class
-													java.lang.String messageClassName = (java.lang.String)faultMessageMap.get(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"));
+													java.lang.String messageClassName = faultMessageMap.get(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"));
 														java.lang.Class messageClass = java.lang.Class.forName(messageClassName);
 													java.lang.Object messageObject = fromOM(faultElt,messageClass);
 													java.lang.reflect.Method m = exceptionClass.getMethod("setFaultMessage",
@@ -922,7 +917,7 @@
                     </xsl:for-each>
                 </xsl:if>
                 {
-                org.apache.axis2.context.MessageContext _messageContext = null;
+                org.apache.axis2.context.MessageContext _messageContext = new org.apache.axis2.context.MessageContext();
 
                 <xsl:if test="$mep='11'">try {</xsl:if>
                 org.apache.axis2.client.OperationClient _operationClient = _serviceClient.createClient(_operations[<xsl:value-of select="position()-1"/>].getName());
@@ -936,7 +931,6 @@
 
                 <xsl:for-each select="input/param[@Action!='']">_operationClient.getOptions().setAction("<xsl:value-of select="@Action"/>");</xsl:for-each>
                 org.apache.axiom.soap.SOAPEnvelope env = null;
-                 _messageContext = new org.apache.axis2.context.MessageContext();
 
                 <xsl:variable name="count" select="count(input/param[@type!=''])"/>
                                     <xsl:choose>
@@ -952,13 +946,13 @@
                                                         <xsl:when test="$inputcount=1">
                                                             <!-- Even when the parameters are 1 we have to see whether we have the
                                                                 wrapped parameters -->
-                                                            <xsl:variable name="inputElementType" select="input/param[@location='body' and @type!='']/@type"></xsl:variable>
+                                                            <xsl:variable name="param" select="input/param[@location='body' and @type!='']"></xsl:variable>
 
                                                             <xsl:choose>
                                                                 <xsl:when test="$isUnwrapParameters">
-                                                                    <xsl:value-of select="$inputElementType"/><xsl:text> </xsl:text>dummyWrappedType = null;
+                                                                    <xsl:value-of select="$param/@type"/><xsl:text> </xsl:text>dummyWrappedType = null;
                                                                     env = toEnvelope(getFactory(_operationClient.getOptions().getSoapVersionURI()),
-                                                                    <xsl:for-each select="input/param[@location='body' and @type!='']/param">
+                                                                    <xsl:for-each select="$param/param">
                                                                         <xsl:value-of select="@name"/>,
                                                                     </xsl:for-each>dummyWrappedType,
                                                                     optimizeContent(new javax.xml.namespace.QName("<xsl:value-of select="$method-ns"/>",
@@ -967,10 +961,12 @@
                                                                 <xsl:otherwise>
                                                                     <!-- there are no unwrapped parameters - go ahead and use the normal wrapped codegen-->
                                                                     env = toEnvelope(getFactory(_operationClient.getOptions().getSoapVersionURI()),
-                                                                    <xsl:value-of select="input/param[@location='body' and @type!='']/@name"/>,
-                                                                    optimizeContent(new javax.xml.namespace.QName("<xsl:value-of select="$method-ns"/>",
-                                                                    "<xsl:value-of select="$method-name"/>")),new javax.xml.namespace.QName("<xsl:value-of select="$method-ns"/>",
-                                                                    "<xsl:value-of select="$method-name"/>"));
+                                                                    <xsl:value-of select="$param/@name"/>,
+                                                                    optimizeContent(new javax.xml.namespace.QName("<xsl:value-of select="$method-ns"/>", "<xsl:value-of select="$method-name"/>")),
+                                                                    <xsl:choose>
+                                                                        <xsl:when test="$param/qname">new javax.xml.namespace.QName("<xsl:value-of select="$param/qname/@nsuri"/>", "<xsl:value-of select="$param/qname/@localname"/>")</xsl:when>
+                                                                        <xsl:otherwise>null</xsl:otherwise>
+                                                                    </xsl:choose>);
                                                                 </xsl:otherwise>
                                                             </xsl:choose>
                                                         </xsl:when>
@@ -1046,12 +1042,12 @@
                       if (faultExceptionNameMap.containsKey(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"))){
                           //make the fault by reflection
                           try{
-                              java.lang.String exceptionClassName = (java.lang.String)faultExceptionClassNameMap.get(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"));
+                              java.lang.String exceptionClassName = faultExceptionClassNameMap.get(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"));
                               java.lang.Class exceptionClass = java.lang.Class.forName(exceptionClassName);
                               java.lang.Exception ex=
                                       (java.lang.Exception) exceptionClass.newInstance();
                               //message class
-                              java.lang.String messageClassName = (java.lang.String)faultMessageMap.get(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"));
+                              java.lang.String messageClassName = faultMessageMap.get(new org.apache.axis2.client.FaultMapKey(faultElt.getQName(),"<xsl:value-of select="@originalName"/>"));
                               java.lang.Class messageClass = java.lang.Class.forName(messageClassName);
                               java.lang.Object messageObject = fromOM(faultElt,messageClass);
                               java.lang.reflect.Method m = exceptionClass.getMethod("setFaultMessage",

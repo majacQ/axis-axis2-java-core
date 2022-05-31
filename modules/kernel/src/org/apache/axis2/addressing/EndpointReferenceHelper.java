@@ -25,8 +25,6 @@ import org.apache.axiom.om.OMFactory;
 import org.apache.axiom.om.OMNamespace;
 import org.apache.axiom.om.OMNode;
 import org.apache.axiom.om.util.AXIOMUtil;
-import org.apache.axiom.om.util.AttributeHelper;
-import org.apache.axiom.om.util.ElementHelper;
 import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.addressing.metadata.InterfaceName;
@@ -124,22 +122,7 @@ public class EndpointReferenceHelper {
             fromOM(epr, eprOMElement, map, isFinalAddressingNamespace);
 
         return ((QName) map.get(AddressingConstants.EPR_ADDRESS)).getNamespaceURI();
-    }
-
-    /**
-     * Populates an endpoint reference based on the <code>String</code> that is
-     * passed in. If the http://schemas.xmlsoap.org/ws/2004/08/addressing namespace
-     * is in effect then any reference properties will be saved as reference parameters.
-     * Regardless of the addressing namespace in effect, any elements present in the
-     * <code>String</code> that are not recognised are saved as extensibility elements.
-     *
-     * @param eprString string from the element of endpoint reference type
-     * @throws AxisFault if unable to locate an address element
-     * @deprecated use {@link #fromString(String)} instead.
-     */
-    public static EndpointReference fromOM(String eprString) throws AxisFault {
-        return fromString(eprString);
-    }
+    }    
 
     /**
      * Populates an endpoint reference based on the <code>String</code> that is
@@ -230,7 +213,7 @@ public class EndpointReferenceHelper {
                 Iterator attrIter = addressAttributes.iterator();
                 while (attrIter.hasNext()) {
                     OMAttribute omAttribute = (OMAttribute) attrIter.next();
-                    AttributeHelper.importOMAttribute(omAttribute, addressE);
+                    addressE.addAttribute((OMAttribute)factory.importInformationItem(omAttribute));
                 }
             }
 
@@ -241,7 +224,7 @@ public class EndpointReferenceHelper {
                         AddressingConstants.Final.WSA_METADATA, wsaNS, eprElement);
                 for (int i = 0, size = metaData.size(); i < size; i++) {
                     OMElement omElement = (OMElement) metaData.get(i);
-                    metadataE.addChild(ElementHelper.importOMElement(omElement, factory));
+                    metadataE.addChild((OMElement)factory.importInformationItem(omElement));
                 }
 
                 ArrayList metadataAttributes = epr.getMetadataAttributes();
@@ -249,7 +232,7 @@ public class EndpointReferenceHelper {
                     Iterator attrIter = metadataAttributes.iterator();
                     while (attrIter.hasNext()) {
                         OMAttribute omAttribute = (OMAttribute) attrIter.next();
-                        AttributeHelper.importOMAttribute(omAttribute, metadataE);
+                        metadataE.addAttribute((OMAttribute)factory.importInformationItem(omAttribute));
                     }
                 }
             }
@@ -262,7 +245,7 @@ public class EndpointReferenceHelper {
                 Iterator iterator = referenceParameters.values().iterator();
                 while (iterator.hasNext()) {
                     OMElement omElement = (OMElement) iterator.next();
-                    refParameterElement.addChild(ElementHelper.importOMElement(omElement, factory));
+                    refParameterElement.addChild((OMElement)factory.importInformationItem(omElement));
                 }
             }
 
@@ -270,7 +253,7 @@ public class EndpointReferenceHelper {
             if (attributes != null) {
                 for (int i = 0, size = attributes.size(); i < size; i++) {
                     OMAttribute omAttribute = (OMAttribute) attributes.get(i);
-                    AttributeHelper.importOMAttribute(omAttribute, eprElement);
+                    eprElement.addAttribute((OMAttribute)factory.importInformationItem(omAttribute));
                 }
             }
 
@@ -279,7 +262,7 @@ public class EndpointReferenceHelper {
             if (extensibleElements != null) {
                 for (int i = 0, size = extensibleElements.size(); i < size; i++) {
                     OMElement omElement = (OMElement) extensibleElements.get(i);
-                    eprElement.addChild(ElementHelper.importOMElement(omElement, factory));
+                    eprElement.addChild((OMElement)factory.importInformationItem(omElement));
                 }
             }
         } else {

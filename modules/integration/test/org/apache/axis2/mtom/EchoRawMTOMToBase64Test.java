@@ -28,7 +28,6 @@ import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMFactory;
 import org.apache.axiom.om.OMNamespace;
 import org.apache.axiom.om.OMText;
-import org.apache.axiom.om.impl.llom.OMTextImpl;
 import org.apache.axiom.soap.SOAP12Constants;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axis2.AxisFault;
@@ -36,10 +35,10 @@ import org.apache.axis2.Constants;
 import org.apache.axis2.addressing.EndpointReference;
 import org.apache.axis2.client.Options;
 import org.apache.axis2.client.ServiceClient;
-import org.apache.axis2.client.async.AsyncResult;
-import org.apache.axis2.client.async.Callback;
+import org.apache.axis2.client.async.AxisCallback;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.context.ConfigurationContextFactory;
+import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.AxisService;
 import org.apache.axis2.engine.Echo;
 import org.apache.axis2.integration.TestingUtils;
@@ -98,31 +97,44 @@ public class EchoRawMTOMToBase64Test extends UtilServerBasedTestCase {
         OMElement data = fac.createOMElement("data", omNs);
         byte[] byteArray = new byte[] { 13, 56, 65, 32, 12, 12, 7, 98 };
         DataHandler dataHandler = new DataHandler(new ByteArrayDataSource(byteArray));
-        expectedTextData = new OMTextImpl(dataHandler, true, fac);
+        expectedTextData = fac.createOMText(dataHandler, true);
         data.addChild(expectedTextData);
         rpcWrapEle.addChild(data);
         return rpcWrapEle;
     }
 
-    public void testEchoXMLASync() throws Exception {
+    public void _testEchoXMLASync() throws Exception {
         OMElement payload = createPayload();
         Options clientOptions = new Options();
         clientOptions.setTo(targetEPR);
         clientOptions.setTransportInProtocol(Constants.TRANSPORT_HTTP);
 
 
-        Callback callback = new Callback() {
-            public void onComplete(AsyncResult result) {
-                SOAPEnvelope envelope = result.getResponseEnvelope();
+        AxisCallback callback = new AxisCallback() {
+            
+            public void onMessage(MessageContext msgContext) {
+                SOAPEnvelope envelope = msgContext.getEnvelope();
 
                 OMElement data = (OMElement)envelope.getBody().getFirstElement().getFirstOMChild();
                 compareWithCreatedOMText(data.getText());
-                finish = true;
+                finish = true;                
             }
+            
+            public void onFault(MessageContext msgContext) {
+                SOAPEnvelope envelope = msgContext.getEnvelope();
 
+                OMElement data = (OMElement)envelope.getBody().getFirstElement().getFirstOMChild();
+                compareWithCreatedOMText(data.getText());
+                finish = true;  
+                
+            }
+            
             public void onError(Exception e) {
                 log.info(e.getMessage());
-                finish = true;
+                finish = true;                
+            }
+            
+            public void onComplete() {                
             }
         };
 

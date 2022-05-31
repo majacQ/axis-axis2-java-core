@@ -19,21 +19,35 @@
 
 package org.apache.axis2.description;
 
-import junit.framework.TestCase;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.context.ServiceContext;
 import org.apache.axis2.context.ServiceGroupContext;
 import org.apache.axis2.deployment.DeploymentConstants;
+import org.apache.axis2.description.java2wsdl.XMLSchemaTest;
 import org.apache.axis2.engine.AxisConfiguration;
+import org.apache.axis2.util.Utils;
+import org.apache.ws.commons.schema.XmlSchema;
+import org.apache.ws.commons.schema.XmlSchemaCollection;
+import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.w3c.dom.ls.DOMImplementationLS;
+import org.w3c.dom.ls.LSSerializer;
 
 import javax.xml.namespace.QName;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.stream.StreamSource;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.ObjectOutputStream;
+import java.util.ArrayList;
 
-public class AxisServiceTest extends TestCase {
+public class AxisServiceTest extends XMLSchemaTest {
     public static final String PARAM_NAME = "CustomParameter";
     public static final Object PARAM_VALUE = new Object();
+    private AxisService service;
+    private ArrayList<XmlSchema> sampleSchemas;
 
     class MyObserver implements ParameterObserver {
         public boolean gotIt = false;
@@ -45,9 +59,26 @@ public class AxisServiceTest extends TestCase {
             }
         }
     }
+    
+    
+
+    @Override
+    protected void setUp() throws Exception {
+        service = new AxisService();
+        sampleSchemas = new ArrayList<XmlSchema>();
+        super.setUp();
+    }
+    
+    @Override
+    protected void tearDown() throws Exception {
+        service = null;
+        sampleSchemas = null;
+        super.tearDown();
+    }
+
+
 
     public void testAddMessageElementQNameToOperationMappingBasic() {
-        AxisService service = new AxisService();
         
         AxisOperation op1 = new InOnlyAxisOperation();
         QName opName = new QName("foo");
@@ -70,7 +101,6 @@ public class AxisServiceTest extends TestCase {
     }
     
     public void testAddMessageElementQNameToOperationMappingOverloading() {
-        AxisService service = new AxisService();
         
         AxisOperation op1 = new InOnlyAxisOperation();
         AxisOperation op2 = new InOnlyAxisOperation();
@@ -95,7 +125,6 @@ public class AxisServiceTest extends TestCase {
     }
 
     public void testParameterObserver() throws Exception {
-        AxisService service = new AxisService();
 
         MyObserver observer = new MyObserver();
         service.addParameterObserver(observer);
@@ -176,9 +205,7 @@ public class AxisServiceTest extends TestCase {
         assertTrue("SUCCESSFUL".equals(mc.getProperty("MESSAGE_PROPERTY")));
     }
     
-    public void testOperationActionMapping() throws Exception {
-        AxisService service = new AxisService();
-                
+    public void testOperationActionMapping() throws Exception {                
         AxisOperation op1 = new InOutAxisOperation();
         AxisOperation op2 = new InOutAxisOperation();
         op2.addParameter(DeploymentConstants.TAG_ALLOWOVERRIDE, "true");
@@ -201,7 +228,86 @@ public class AxisServiceTest extends TestCase {
         assertNull(service.getOperationByAction("testaction1"));
         assertEquals(service.getOperationByAction("testaction2"), op2);
     }
-    
+
+    public void testReleaseSchemaList() throws Exception {
+        loadSampleSchemaFile(sampleSchemas);
+        service.addSchema(sampleSchemas);
+        assertTrue(service.getSchema().size() != 0);
+        service.releaseSchemaList();
+        assertTrue(service.getSchema().size() == 0);
+    }
+
+    public void testPrintSchema() throws Exception {
+        loadSampleSchemaFile(sampleSchemas);
+        service.addSchema(sampleSchemas);
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        service.printSchema(stream);
+        String a = stream.toString();
+        stream.reset();
+        for (XmlSchema schema : sampleSchemas) {
+            schema.write(stream);
+        }
+        String b = stream.toString();
+        stream.close();
+        assertEquals(a, b);
+    }
+
+    public void testPrintXSD() throws Exception {
+        InputStream is = new FileInputStream(SampleSchemasDirectory + "sampleSchema1.xsd");
+        XmlSchemaCollection schemaCol = new XmlSchemaCollection();
+        XmlSchema schema = schemaCol.read(new StreamSource(is));
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        ArrayList<XmlSchema> xmlSchemas = new ArrayList<XmlSchema>();
+        xmlSchemas.add(schema);
+        service.addSchema(xmlSchemas);
+        service.printXSD(stream, "");
+        // service has a single schema and it is printed. The it is compared
+        // with the saved file
+        assertSimilarXML(readXMLfromSchemaFile(SampleSchemasDirectory
+                + "printXSDReference.xsd"), stream.toString());
+    }
+
+    public void testPrintWSDL() throws Exception {
+        service = Utils.createSimpleService(new QName("test"), "", new QName("test"));
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        service.printWSDL(stream);
+
+        String s = readWSDLFromFile("test-resources" + File.separator + "wsdl" + File.separator
+                + "printWSDLreference.wsdl");
+        assertSimilarXML(s, stream.toString());
+    }
+
+    public String convertXMLFileToString(String fileName) {
+        try {
+            DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+            InputStream inputStream = new FileInputStream(new File(fileName));
+            org.w3c.dom.Document doc = documentBuilderFactory.newDocumentBuilder().parse(
+                    inputStream);
+            DOMImplementationLS domImplementation = (DOMImplementationLS) doc.getImplementation();
+            LSSerializer lsSerializer = domImplementation.createLSSerializer();
+            return lsSerializer.writeToString(doc);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public void testGetSchema() throws Exception {
+        loadSampleSchemaFile(sampleSchemas);
+        service.addSchema(sampleSchemas);
+        assertEquals(service.getSchema(0), sampleSchemas.get(0));
+    }
+
+    public void testGetSchemaElement() throws Exception {
+        loadSampleSchemaFile(sampleSchemas);
+        service.addSchema(sampleSchemas);
+        XmlSchemaElement schemaElement1 = service.getSchemaElement(new QName(
+                "http://www.w3schools.com", "note"));
+        XmlSchemaElement schemaElement2 = sampleSchemas.get(0).getElementByName(
+                new QName("http://www.w3schools.com", "note"));
+        assertEquals(schemaElement1, schemaElement2);
+    }
+
     /**
      * Sameple MessageContextListener which sets a property 
      * on the MessageContext when the SerivceContext is attached.

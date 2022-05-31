@@ -27,15 +27,13 @@ import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMFactory;
 import org.apache.axiom.om.OMNamespace;
 import org.apache.axiom.om.OMText;
-import org.apache.axiom.om.impl.llom.OMTextImpl;
 import org.apache.axiom.soap.SOAP12Constants;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.Constants;
 import org.apache.axis2.client.Options;
 import org.apache.axis2.client.ServiceClient;
-import org.apache.axis2.client.async.AsyncResult;
-import org.apache.axis2.client.async.Callback;
+import org.apache.axis2.client.async.AxisCallback;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.context.ConfigurationContextFactory;
 import org.apache.axis2.context.MessageContext;
@@ -62,7 +60,7 @@ public class EchoRawMTOMTest extends UtilServerBasedTestCase implements TestCons
 
     private AxisService service;
 
-    private OMTextImpl expectedTextData;
+    private OMText expectedTextData;
 
     private boolean finish = false;
 
@@ -99,7 +97,7 @@ public class EchoRawMTOMTest extends UtilServerBasedTestCase implements TestCons
         OMElement data = fac.createOMElement("data", omNs);
         FileDataSource fileDataSource = new FileDataSource(TestingUtils.prefixBaseDirectory("test-resources/mtom/test.jpg"));
         expectedDH = new DataHandler(fileDataSource);
-        expectedTextData = new OMTextImpl(expectedDH, true, fac);
+        expectedTextData = fac.createOMText(expectedDH, true);
         data.addChild(expectedTextData);
         rpcWrapEle.addChild(data);
         return rpcWrapEle;
@@ -113,21 +111,37 @@ public class EchoRawMTOMTest extends UtilServerBasedTestCase implements TestCons
         options.setTransportInProtocol(Constants.TRANSPORT_HTTP);
         options.setProperty(Constants.Configuration.CHARACTER_SET_ENCODING, MessageContext.UTF_16);
 
-        Callback callback = new Callback() {
-            public void onComplete(AsyncResult result) {
-                SOAPEnvelope envelope = result.getResponseEnvelope();
+        AxisCallback callback = new AxisCallback() {
+            
+            public void onMessage(MessageContext msgContext) {
+                SOAPEnvelope envelope = msgContext.getEnvelope();
 
                 OMElement ele = (OMElement)envelope.getBody().getFirstElement().getFirstOMChild();
                 OMText binaryNode = (OMText)ele.getFirstOMChild();
 
                 // to the assert equal
                 compareWithCreatedOMText(binaryNode);
-                finish = true;
+                finish = true;                
             }
+            
+            public void onFault(MessageContext msgContext) {
+                SOAPEnvelope envelope = msgContext.getEnvelope();
 
+                OMElement ele = (OMElement)envelope.getBody().getFirstElement().getFirstOMChild();
+                OMText binaryNode = (OMText)ele.getFirstOMChild();
+
+                // to the assert equal
+                compareWithCreatedOMText(binaryNode);
+                finish = true;                
+            }
+            
             public void onError(Exception e) {
                 log.info(e.getMessage());
-                finish = true;
+                finish = true;                
+            }
+            
+            public void onComplete() {                
+                
             }
         };
         ConfigurationContext configContext =
@@ -189,10 +203,11 @@ public class EchoRawMTOMTest extends UtilServerBasedTestCase implements TestCons
         options.setSoapVersionURI(SOAP12Constants.SOAP_ENVELOPE_NAMESPACE_URI);
         ConfigurationContext configContext =
                 ConfigurationContextFactory.createConfigurationContextFromFileSystem(
-                        TestingUtils.prefixBaseDirectory("target/test-resources/integrationRepo"), null);
+                        TestingUtils.prefixBaseDirectory("target/test-resources/integrationRepo"),
+                        TestingUtils.prefixBaseDirectory("target/test-resources/integrationRepo/conf/axis2.xml"));
 
         ServiceClient sender = new ServiceClient(configContext, null);
-        sender.engageModule(new QName("addressing"));
+        sender.engageModule("addressing");
         options.setAction(Constants.AXIS2_NAMESPACE_URI + "/" + operationName.getLocalPart());
         sender.setOptions(options);
         options.setUseSeparateListener(true);

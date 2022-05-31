@@ -86,6 +86,7 @@ public class BeanWriterMetaInfoHolder {
     protected boolean hasParticleType;
 
     protected List<QName> nillableQNameList = new ArrayList<QName>();
+    protected List<QName> fixedQNameList = new ArrayList<QName>();
 
     //the parent metainfo holder, useful in handling extensions and
     //restrictions
@@ -253,8 +254,14 @@ public class BeanWriterMetaInfoHolder {
      */
     public boolean isRestrictionBaseType(QName restrictionBaseType) {
         QName baseTypeQName = this.elementToSchemaQNameMap.get(restrictionBaseType);
-        return (this.restrictionBaseType != null) && (baseTypeQName != null) &&
-                this.restrictionBaseType.equals(baseTypeQName);
+        if (restriction && simple && baseTypeQName != null && restrictionBaseType != null) {
+            return true;
+        } else if (this.restrictionBaseType != null && baseTypeQName != null
+                && this.restrictionBaseType.equals(baseTypeQName)) {
+            return true;
+
+        }
+        return false;
     }
 
     /**
@@ -306,6 +313,25 @@ public class BeanWriterMetaInfoHolder {
      */
     public boolean isNillable(QName eltQName) {
         return nillableQNameList.contains(eltQName);
+    }
+
+    /**
+     * Registers a Qname as fixed
+     * The qName better be of an element
+     *
+     * @param eltQName
+     */
+    public void registerFixedQName(QName eltQName) {
+        fixedQNameList.add(eltQName);
+    }
+
+    /**
+     * Returns whether a QName is fixed or not
+     *
+     * @param eltQName
+     */
+    public boolean isFixed(QName eltQName) {
+        return fixedQNameList.contains(eltQName);
     }
 
     /**
@@ -933,4 +959,34 @@ public class BeanWriterMetaInfoHolder {
         return this.xmlNameJavaNameMap.get(xmlName);
     }
 
+    public QName getRestrictionBaseType() {
+        return restrictionBaseType;
+    }    
+
+    @Override
+    public String toString() {
+        return "BeanWriterMetaInfoHolder [anonymous=" + anonymous + ", choice=" + choice
+                + ", elementQNameToDefulatValueMap=" + elementQNameToDefulatValueMap
+                + ", elementToJavaClassMap=" + elementToJavaClassMap + ", elementToSchemaQNameMap="
+                + elementToSchemaQNameMap + ", enumFacet=" + enumFacet + ", extension=" + extension
+                + ", extensionBaseType=" + extensionBaseType + ", extensionClassName="
+                + extensionClassName + ", hasParticleType=" + hasParticleType + ", isList="
+                + isList + ", isParticleClass=" + isParticleClass + ", isUnion=" + isUnion
+                + ", itemTypeClassName=" + itemTypeClassName + ", itemTypeQName=" + itemTypeQName
+                + ", lengthFacet=" + lengthFacet + ", maxExclusiveFacet=" + maxExclusiveFacet
+                + ", maxInclusiveFacet=" + maxInclusiveFacet + ", maxLengthFacet=" + maxLengthFacet
+                + ", memberTypes=" + memberTypes + ", memberTypesKeys=" + memberTypesKeys
+                + ", minExclusiveFacet=" + minExclusiveFacet + ", minInclusiveFacet="
+                + minInclusiveFacet + ", minLengthFacet=" + minLengthFacet + ", nillableQNameList="
+                + nillableQNameList + ", ordered=" + ordered + ", ownClassName=" + ownClassName
+                + ", ownQname=" + ownQname + ", parent=" + parent + ", patternFacet="
+                + patternFacet + ", qNameMaxOccursCountMap=" + qNameMaxOccursCountMap
+                + ", qNameMinOccursCountMap=" + qNameMinOccursCountMap + ", qNameOrderMap="
+                + qNameOrderMap + ", restriction=" + restriction + ", restrictionBaseType="
+                + restrictionBaseType + ", restrictionClassName=" + restrictionClassName
+                + ", simple=" + simple + ", specialTypeFlagMap=" + specialTypeFlagMap
+                + ", totalDigitsFacet=" + totalDigitsFacet + ", xmlNameJavaNameMap="
+                + xmlNameJavaNameMap + ", fixedQNameList=" + fixedQNameList + "]";
+    }
+    
 }

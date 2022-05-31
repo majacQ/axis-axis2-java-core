@@ -28,13 +28,14 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
-import org.apache.axiom.attachments.impl.BufferUtils;
+import org.apache.axiom.attachments.ByteArrayDataSource;
 import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMDataSource;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMFactory;
 import org.apache.axiom.om.OMNamespace;
 import org.apache.axiom.om.OMOutputFormat;
+import org.apache.axiom.util.io.IOUtils;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.context.MessageContext;
 
@@ -50,7 +51,7 @@ public class DataSourceBuilder implements Builder {
         byte[] bytes;
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream(); 
-            BufferUtils.inputStream2OutputStream(inputStream, baos);
+            IOUtils.copy(inputStream, baos, -1);
             baos.flush();
             bytes = baos.toByteArray();
         } catch (IOException e) {
@@ -60,7 +61,7 @@ public class DataSourceBuilder implements Builder {
         return factory.createOMElement(ds, "dummy", ns);
     }
 
-    public class ByteArrayDataSourceEx extends javax.mail.util.ByteArrayDataSource implements OMDataSource {
+    public class ByteArrayDataSourceEx extends ByteArrayDataSource implements OMDataSource {
         private byte[] bytes;
     
         public ByteArrayDataSourceEx(byte[] bytes, String s) {

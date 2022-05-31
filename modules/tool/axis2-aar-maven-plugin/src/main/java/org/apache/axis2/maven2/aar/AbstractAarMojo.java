@@ -30,7 +30,6 @@ import org.codehaus.plexus.util.FileUtils;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -42,7 +41,7 @@ public abstract class AbstractAarMojo
     /**
      * The projects base directory.
      *
-     * @parameter expression="${project.basedir}"
+     * @parameter property="project.basedir"
      * @required
      * @readonly
      */
@@ -51,7 +50,7 @@ public abstract class AbstractAarMojo
     /**
      * The maven project.
      *
-     * @parameter expression="${project}"
+     * @parameter property="project"
      * @required
      * @readonly
      */
@@ -60,7 +59,7 @@ public abstract class AbstractAarMojo
     /**
      * The directory containing generated classes.
      *
-     * @parameter expression="${project.build.outputDirectory}"
+     * @parameter default-value="${project.build.outputDirectory}"
      * @required
      */
     private File classesDirectory;
@@ -68,7 +67,7 @@ public abstract class AbstractAarMojo
     /**
      * The directory where the aar is built.
      *
-     * @parameter expression="${project.build.directory}/aar"
+     * @parameter default-value="${project.build.directory}/aar"
      * @required
      */
     protected File aarDirectory;
@@ -78,7 +77,7 @@ public abstract class AbstractAarMojo
      * src/main/resources with that name then it will automatically be included. Otherwise this
      * parameter must be set.
      *
-     * @parameter
+     * @parameter default-value="src/main/resources/META-INF/services.xml"
      */
     private File servicesXmlFile;
 
@@ -108,7 +107,7 @@ public abstract class AbstractAarMojo
     /**
      * Whether the dependency jars should be included in the aar
      *
-     * @parameter expression="${includeDependencies}" default-value="true"
+     * @parameter default-value="true"
      */
     private boolean includeDependencies;
 
@@ -157,12 +156,11 @@ public abstract class AbstractAarMojo
             copyMetaInfFile(wsdlFile, wsdlFileTarget, wsdlExistsBeforeCopyingClasses, "WSDL file");
 
             if (includeDependencies) {
-                Set artifacts = project.getArtifacts();
+                Set<Artifact> artifacts = project.getArtifacts();
 
-                List duplicates = findDuplicates(artifacts);
+                List<String> duplicates = findDuplicates(artifacts);
 
-                for (Iterator iter = artifacts.iterator(); iter.hasNext();) {
-                    Artifact artifact = (Artifact)iter.next();
+                for (Artifact artifact : artifacts) {
                     String targetFileName = getDefaultFinalName(artifact);
 
                     getLog().debug("Processing: " + targetFileName);
@@ -177,7 +175,7 @@ public abstract class AbstractAarMojo
                     // TODO: utilise appropriate methods from project builder
                     ScopeArtifactFilter filter = new ScopeArtifactFilter(
                             Artifact.SCOPE_RUNTIME);
-                    if (!artifact.isOptional() && filter.include(artifact)) {
+                    if (filter.include(artifact)) {
                         String type = artifact.getType();
                         if ("jar".equals(type)) {
                             copyFileIfModified(artifact.getFile(), new File(
@@ -198,11 +196,10 @@ public abstract class AbstractAarMojo
      * @param artifacts set of artifacts
      * @return List of duplicated artifacts
      */
-    private List findDuplicates(Set artifacts) {
-        List duplicates = new ArrayList();
-        List identifiers = new ArrayList();
-        for (Iterator iter = artifacts.iterator(); iter.hasNext();) {
-            Artifact artifact = (Artifact)iter.next();
+    private List<String> findDuplicates(Set<Artifact> artifacts) {
+        List<String> duplicates = new ArrayList<String>();
+        List<String> identifiers = new ArrayList<String>();
+        for (Artifact artifact : artifacts) {
             String candidate = getDefaultFinalName(artifact);
             if (identifiers.contains(candidate)) {
                 duplicates.add(candidate);

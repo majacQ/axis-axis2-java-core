@@ -27,21 +27,14 @@ import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMFactory;
 import org.apache.axiom.om.OMNamespace;
 import org.apache.axis2.Constants;
-import org.apache.axis2.addressing.EndpointReference;
 import org.apache.axis2.client.Options;
 import org.apache.axis2.client.ServiceClient;
-import org.apache.axis2.context.ConfigurationContext;
-import org.apache.axis2.context.ConfigurationContextFactory;
-import org.apache.axis2.description.AxisService;
-import org.apache.axis2.testutils.PortAllocator;
-import org.apache.axis2.transport.http.SimpleHTTPServer;
-import org.apache.axis2.util.Utils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.apache.axis2.testutils.Axis2Server;
+import org.apache.axis2.testutils.ClientHelper;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -50,47 +43,13 @@ import java.net.URL;
 
 public class JSONIntegrationTest implements JSONTestConstants {
 
-    private static AxisService service;
-
     private String expectedString;
 
-    private static SimpleHTTPServer server;
+    @ClassRule
+    public static Axis2Server server = new Axis2Server("target/repo/json");
 
-    private static ConfigurationContext configurationContext;
-
-    private static EndpointReference echoTargetEPR;
-    private static String pojoUri;
-
-    @BeforeClass
-    public static void startServer() throws Exception {
-        int testingPort = PortAllocator.allocatePort();
-        echoTargetEPR = new EndpointReference(
-                "http://127.0.0.1:" + (testingPort)
-                        + "/axis2/services/EchoXMLService/echoOM");
-        pojoUri = "http://127.0.0.1:" + testingPort + "/axis2/services/POJOService";
-
-        File configFile =
-                new File(System.getProperty("basedir", ".") + "/test-resources/axis2.xml");
-        configurationContext = ConfigurationContextFactory.createConfigurationContextFromFileSystem(
-                System.getProperty("basedir", ".") + "/test-repository",
-                configFile.getAbsolutePath());
-        server = new SimpleHTTPServer(configurationContext, testingPort);
-        try {
-            server.start();
-        } finally {
-
-        }
-        service = Utils.createSimpleService(serviceName,
-                                            org.apache.axis2.json.Echo.class.getName(),
-                                            operationName);
-        server.getConfigurationContext().getAxisConfiguration().addService(
-                service);
-    }
-
-    @AfterClass
-    public static void stopServer() throws Exception {
-		server.stop();
-    }
+    @ClassRule
+    public static ClientHelper clientHelper = new ClientHelper(server);
 
     protected OMElement createEnvelope() throws Exception {
         OMFactory fac = OMAbstractFactory.getOMFactory();
@@ -109,16 +68,12 @@ public class JSONIntegrationTest implements JSONTestConstants {
 
     private void doEchoOM(String messageType, String httpMethod) throws Exception{
     	OMElement payload = createEnvelope();
-        Options options = new Options();
-        options.setTo(echoTargetEPR);
+        ServiceClient sender = clientHelper.createServiceClient("EchoXMLService");
+        Options options = sender.getOptions();
         options.setProperty(Constants.Configuration.MESSAGE_TYPE, messageType);
         options.setTransportInProtocol(Constants.TRANSPORT_HTTP);
         options.setProperty(Constants.Configuration.HTTP_METHOD, httpMethod);
-//        ConfigurationContext clientConfigurationContext = ConfigurationContextFactory.createDefaultConfigurationContext();
-        ServiceClient sender = new ServiceClient(configurationContext, null);
         options.setAction(null);
-        sender.setOptions(options);
-        options.setTo(echoTargetEPR);
         OMElement result = sender.sendReceive(payload);
         OMElement ele = (OMElement)result.getFirstOMChild();
         compareWithCreatedOMText(ele.getText());
@@ -126,7 +81,7 @@ public class JSONIntegrationTest implements JSONTestConstants {
 
     @Test
     public void testEchoOMWithJSONBadgerfish() throws Exception{
-    	doEchoOM("application/json/badgerfish", Constants.Configuration.HTTP_METHOD_POST);
+    	doEchoOM("application/json+badgerfish", Constants.Configuration.HTTP_METHOD_POST);
     }
 
     @Test
@@ -141,9 +96,9 @@ public class JSONIntegrationTest implements JSONTestConstants {
 
     @Test
     public void testPOJOServiceWithJSONBadgerfish() throws Exception {
-        HttpURLConnection conn = (HttpURLConnection)new URL(pojoUri).openConnection();
+        HttpURLConnection conn = (HttpURLConnection)new URL(server.getEndpoint("POJOService")).openConnection();
         conn.setDoOutput(true);
-        conn.addRequestProperty("Content-Type", "application/json/badgerfish");
+        conn.addRequestProperty("Content-Type", "application/json+badgerfish");
         Writer out = new OutputStreamWriter(conn.getOutputStream(), "UTF-8");
         // XML is: <sayHello xmlns="http://example.org"><myName>Joe</myName></sayHello>
         out.write("{ \"sayHello\" : { \"@xmlns\" : { \"$\" : \"http://example.org\" }, \"myName\" : { \"$\" : \"Joe\" } } }");
@@ -157,7 +112,7 @@ public class JSONIntegrationTest implements JSONTestConstants {
 
     @Test
     public void testPOJOServiceWithJSONMapped() throws Exception {
-        HttpURLConnection conn = (HttpURLConnection)new URL(pojoUri).openConnection();
+        HttpURLConnection conn = (HttpURLConnection)new URL(server.getEndpoint("POJOService")).openConnection();
         conn.setDoOutput(true);
         conn.addRequestProperty("Content-Type", "application/json");
         Writer out = new OutputStreamWriter(conn.getOutputStream(), "UTF-8");

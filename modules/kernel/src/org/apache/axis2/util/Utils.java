@@ -27,8 +27,6 @@ import org.apache.axiom.util.UIDGenerator;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.Constants;
 import org.apache.axis2.ServiceObjectSupplier;
-import org.apache.axis2.transport.TransportListener;
-import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.context.ConfigurationContextFactory;
 import org.apache.axis2.context.MessageContext;
@@ -52,26 +50,27 @@ import org.apache.axis2.engine.Handler;
 import org.apache.axis2.engine.MessageReceiver;
 import org.apache.axis2.i18n.Messages;
 import org.apache.axis2.receivers.RawXMLINOutMessageReceiver;
+import org.apache.axis2.transport.TransportListener;
+import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.axis2.wsdl.WSDLConstants;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import javax.xml.namespace.QName;
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
-import java.text.ParseException;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Enumeration;
 import java.util.Map;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.SocketException;
-import java.net.NetworkInterface;
-import java.net.InetAddress;
 
 public class Utils {
     private static final Log log = LogFactory.getLog(Utils.class);
@@ -85,16 +84,6 @@ public class Utils {
         handlerDesc.setHandler(handler);
         flow.addHandler(handlerDesc);
     }
-
-    /**
-     * @see org.apache.axis2.util.MessageContextBuilder:createOutMessageContext()
-     * @deprecated (post1.1branch)
-     */
-    public static MessageContext createOutMessageContext(MessageContext inMessageContext)
-            throws AxisFault {
-        return MessageContextBuilder.createOutMessageContext(inMessageContext);
-    }
-
     public static AxisService createSimpleService(QName serviceName, String className, QName opName)
             throws AxisFault {
         return createSimpleService(serviceName, new RawXMLINOutMessageReceiver(), className,
@@ -303,15 +292,15 @@ public class Utils {
         if (path == null || serviceName == null) {
             return null;
         }
-        String[] temp = path.split(serviceName + "/");
+        int idx = path.lastIndexOf(serviceName + "/");
         String operationName = null;
-        if (temp.length > 1) {
-            operationName = temp[temp.length - 1];
+        if (idx != -1) {
+            operationName = path.substring(idx + serviceName.length() + 1);
         } else {
             //this scenario occurs if the endpoint name is there in the URL after service name
-            temp = path.split(serviceName + ".");
-            if (temp.length > 1) {
-                operationName = temp[temp.length - 1];
+            idx = path.lastIndexOf(serviceName + ".");
+            if (idx != -1) {
+                operationName = path.substring(idx + serviceName.length() + 1);
                 operationName = operationName.substring(operationName.indexOf('/') + 1);
             }
         }
@@ -428,18 +417,6 @@ public class Utils {
         }
     }
 
-    /**
-     * Check if a MessageContext property is true.
-     *
-     * @param messageContext the MessageContext
-     * @param propertyName   the property name
-     * @return true if the property is Boolean.TRUE, "true", 1, etc. or false otherwise
-     * @deprecated please use MessageContext.isTrue(propertyName) instead
-     */
-    public static boolean isExplicitlyTrue(MessageContext messageContext, String propertyName) {
-        Object flag = messageContext.getProperty(propertyName);
-        return JavaUtils.isTrueExplicitly(flag);
-    }
 
     /**
      * Maps the String URI of the Message exchange pattern to a integer.
@@ -453,49 +430,49 @@ public class Utils {
         int mepConstant = WSDLConstants.MEP_CONSTANT_INVALID;
 
         if (WSDL2Constants.MEP_URI_IN_OUT.equals(messageExchangePattern) ||
-            WSDLConstants.WSDL20_2006Constants.MEP_URI_IN_OUT.equals(messageExchangePattern) ||
-            WSDLConstants.WSDL20_2004_Constants.MEP_URI_IN_OUT.equals(messageExchangePattern)) {
+            WSDL2Constants.MEP_URI_IN_OUT.equals(messageExchangePattern) ||
+            WSDL2Constants.MEP_URI_IN_OUT.equals(messageExchangePattern)) {
             mepConstant = WSDLConstants.MEP_CONSTANT_IN_OUT;
         } else if (
                 WSDL2Constants.MEP_URI_IN_ONLY.equals(messageExchangePattern) ||
-                WSDLConstants.WSDL20_2006Constants.MEP_URI_IN_ONLY.equals(messageExchangePattern) ||
-                WSDLConstants.WSDL20_2004_Constants.MEP_URI_IN_ONLY
+                WSDL2Constants.MEP_URI_IN_ONLY.equals(messageExchangePattern) ||
+                WSDL2Constants.MEP_URI_IN_ONLY
                         .equals(messageExchangePattern)) {
             mepConstant = WSDLConstants.MEP_CONSTANT_IN_ONLY;
         } else if (WSDL2Constants.MEP_URI_IN_OPTIONAL_OUT
                 .equals(messageExchangePattern) ||
-                                                WSDLConstants.WSDL20_2006Constants.MEP_URI_IN_OPTIONAL_OUT
+                                                WSDL2Constants.MEP_URI_IN_OPTIONAL_OUT
                                                         .equals(messageExchangePattern) ||
-                                                                                        WSDLConstants.WSDL20_2004_Constants.MEP_URI_IN_OPTIONAL_OUT
+                                                                                        WSDL2Constants.MEP_URI_IN_OPTIONAL_OUT
                                                                                                 .equals(messageExchangePattern)) {
             mepConstant = WSDLConstants.MEP_CONSTANT_IN_OPTIONAL_OUT;
         } else if (WSDL2Constants.MEP_URI_OUT_IN.equals(messageExchangePattern) ||
-                   WSDLConstants.WSDL20_2006Constants.MEP_URI_OUT_IN.equals(messageExchangePattern) ||
-                   WSDLConstants.WSDL20_2004_Constants.MEP_URI_OUT_IN
+                   WSDL2Constants.MEP_URI_OUT_IN.equals(messageExchangePattern) ||
+                   WSDL2Constants.MEP_URI_OUT_IN
                            .equals(messageExchangePattern)) {
             mepConstant = WSDLConstants.MEP_CONSTANT_OUT_IN;
         } else if (WSDL2Constants.MEP_URI_OUT_ONLY.equals(messageExchangePattern) ||
-                   WSDLConstants.WSDL20_2006Constants.MEP_URI_OUT_ONLY
+                   WSDL2Constants.MEP_URI_OUT_ONLY
                            .equals(messageExchangePattern) ||
-                                                           WSDLConstants.WSDL20_2004_Constants
+                                                           WSDL2Constants
                                                                    .MEP_URI_OUT_ONLY.equals(messageExchangePattern)) {
             mepConstant = WSDLConstants.MEP_CONSTANT_OUT_ONLY;
         } else if (WSDL2Constants.MEP_URI_OUT_OPTIONAL_IN.equals(messageExchangePattern) ||
-                   WSDLConstants.WSDL20_2006Constants.MEP_URI_OUT_OPTIONAL_IN
+                WSDL2Constants.MEP_URI_OUT_OPTIONAL_IN
                            .equals(messageExchangePattern) ||
-                                                           WSDLConstants.WSDL20_2004_Constants.MEP_URI_OUT_OPTIONAL_IN
+                           WSDL2Constants.MEP_URI_OUT_OPTIONAL_IN
                                                                    .equals(messageExchangePattern)) {
             mepConstant = WSDLConstants.MEP_CONSTANT_OUT_OPTIONAL_IN;
         } else if (WSDL2Constants.MEP_URI_ROBUST_IN_ONLY.equals(messageExchangePattern) ||
-                   WSDLConstants.WSDL20_2006Constants.MEP_URI_ROBUST_IN_ONLY
+                WSDL2Constants.MEP_URI_ROBUST_IN_ONLY
                            .equals(messageExchangePattern) ||
-                                                           WSDLConstants.WSDL20_2004_Constants.MEP_URI_ROBUST_IN_ONLY
+                           WSDL2Constants.MEP_URI_ROBUST_IN_ONLY
                                                                    .equals(messageExchangePattern)) {
             mepConstant = WSDLConstants.MEP_CONSTANT_ROBUST_IN_ONLY;
         } else if (WSDL2Constants.MEP_URI_ROBUST_OUT_ONLY.equals(messageExchangePattern) ||
-                   WSDLConstants.WSDL20_2006Constants.MEP_URI_ROBUST_OUT_ONLY
+                WSDL2Constants.MEP_URI_ROBUST_OUT_ONLY
                            .equals(messageExchangePattern) ||
-                                                           WSDLConstants.WSDL20_2004_Constants.MEP_URI_ROBUST_OUT_ONLY
+                                                           WSDL2Constants.MEP_URI_ROBUST_OUT_ONLY
                                                                    .equals(messageExchangePattern)) {
             mepConstant = WSDLConstants.MEP_CONSTANT_ROBUST_OUT_ONLY;
         }
@@ -756,10 +733,9 @@ public class Utils {
                     final Class<?> serviceClass = Loader.loadClass(
                             classLoader,
                             ((String) serviceClassParam.getValue()).trim());
-                    String className = ((String) serviceClassParam.getValue()).trim();
-                    Class serviceObjectMaker = Loader.loadClass(classLoader, className);
-                    if (serviceObjectMaker.getModifiers() != Modifier.PUBLIC) {
-                        throw new AxisFault("Service class " + className +
+                    int mod = serviceClass.getModifiers();
+                    if (!Modifier.isPublic(mod) || Modifier.isAbstract(mod) || Modifier.isInterface(mod)) {
+                        throw new AxisFault("Service class " + serviceClass.getName() +
                                             " must have public as access Modifier");
                     }
                     return org.apache.axis2.java.security.AccessController.doPrivileged(
@@ -825,5 +801,22 @@ public class Utils {
     		val =  messageContext.getProperty("transportNonBlocking");
     		return val != null && ((Boolean)val).booleanValue();
     	}
+    }
+
+    /**
+     * This method is used to find whether an axis2service is declared as hidden using the
+     * "hiddenService" param
+     *
+     * @param axisService - the service of interest
+     * @return true if is declared as hidden, false if not
+     */
+    public static boolean isHiddenService(AxisService axisService) {
+        boolean hideService = false;
+        Parameter hiddenServiceParam;
+        hiddenServiceParam = axisService.getParameter(Constants.HIDDEN_SERVICE_PARAM_NAME);
+        if (hiddenServiceParam != null) {
+            hideService = !JavaUtils.isFalseExplicitly(hiddenServiceParam.getValue());
+        }
+        return hideService;
     }
 }

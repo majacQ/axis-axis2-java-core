@@ -22,7 +22,6 @@ package org.apache.axis2.builder;
 import org.apache.axiom.attachments.Attachments;
 import org.apache.axiom.attachments.lifecycle.LifecycleManager;
 import org.apache.axiom.attachments.lifecycle.impl.LifecycleManagerImpl;
-import org.apache.axiom.attachments.utils.IOUtils;
 import org.apache.axiom.om.OMAttribute;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMException;
@@ -30,12 +29,7 @@ import org.apache.axiom.om.OMNamespace;
 import org.apache.axiom.om.OMText;
 import org.apache.axiom.om.OMXMLBuilderFactory;
 import org.apache.axiom.om.OMXMLParserWrapper;
-import org.apache.axiom.om.impl.MTOMConstants;
-import org.apache.axiom.om.impl.builder.StAXBuilder;
-import org.apache.axiom.om.impl.builder.StAXOMBuilder;
-import org.apache.axiom.om.impl.builder.XOPAwareStAXOMBuilder;
 import org.apache.axiom.om.util.StAXParserConfiguration;
-import org.apache.axiom.om.util.StAXUtils;
 import org.apache.axiom.soap.SOAP11Constants;
 import org.apache.axiom.soap.SOAP12Constants;
 import org.apache.axiom.soap.SOAPBody;
@@ -44,8 +38,6 @@ import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axiom.soap.SOAPModelBuilder;
 import org.apache.axiom.soap.SOAPProcessingException;
-import org.apache.axiom.soap.impl.builder.MTOMStAXSOAPModelBuilder;
-import org.apache.axiom.soap.impl.builder.StAXSOAPModelBuilder;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.Constants;
 import org.apache.axis2.context.MessageContext;
@@ -57,23 +49,16 @@ import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.axis2.java.security.AccessController;
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.axis2.util.JavaUtils;
+import org.apache.axis2.util.MessageProcessorSelector;
 import org.apache.axis2.util.MultipleEntryHashMap;
 import org.apache.axis2.wsdl.WSDLConstants;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.ws.commons.schema.XmlSchemaAll;
-import org.apache.ws.commons.schema.XmlSchemaComplexType;
-import org.apache.ws.commons.schema.XmlSchemaElement;
-import org.apache.ws.commons.schema.XmlSchemaGroupBase;
-import org.apache.ws.commons.schema.XmlSchemaParticle;
-import org.apache.ws.commons.schema.XmlSchemaSequence;
-import org.apache.ws.commons.schema.XmlSchemaType;
+import org.apache.ws.commons.schema.*;
 
 import javax.activation.DataHandler;
 import javax.xml.namespace.QName;
-import javax.xml.parsers.FactoryConfigurationError;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -83,7 +68,6 @@ import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
-import java.util.Iterator;
 import java.util.Map;
 
 public class BuilderUtil {
@@ -137,65 +121,102 @@ public class BuilderUtil {
                     XmlSchemaComplexType complexType = ((XmlSchemaComplexType)schemaType);
                     XmlSchemaParticle particle = complexType.getParticle();
                     if (particle instanceof XmlSchemaSequence || particle instanceof XmlSchemaAll) {
-                        XmlSchemaGroupBase xmlSchemaGroupBase = (XmlSchemaGroupBase)particle;
-                        Iterator iterator = xmlSchemaGroupBase.getItems().getIterator();
 
-                        // now we need to know some information from the binding operation.
+                        if (particle instanceof XmlSchemaSequence) {
+                            XmlSchemaSequence sequence = (XmlSchemaSequence) particle;
+                            // now we need to know some information from the binding operation.
 
-                        while (iterator.hasNext()) {
-                            XmlSchemaElement innerElement = (XmlSchemaElement)iterator.next();
-                            QName qName = innerElement.getQName();
-                            // ignoring the elements without proper type and minoccurs zero
-                            if ((innerElement.getSchemaTypeName() == null) && (innerElement.getMinOccurs() == 0)){
-                                continue;
-                            }
-                            if (qName == null && innerElement.getSchemaTypeName()
-                                    .equals(org.apache.ws.commons.schema.constants.Constants.XSD_ANYTYPE)) {
-                                createSOAPMessageWithoutSchema(soapFactory, bodyFirstChild,
-                                                               requestParameterMap);
-                                break;
-                            }
-                            long minOccurs = innerElement.getMinOccurs();
-                            boolean nillable = innerElement.isNillable();
-                            String name =
-                                    qName != null ? qName.getLocalPart() : innerElement.getName();
-                            Object value;
-                            OMNamespace ns = (qName == null ||
-                                              qName.getNamespaceURI() == null
-                                              || qName.getNamespaceURI().length() == 0) ?
-                                    null : soapFactory.createOMNamespace(
-                                    qName.getNamespaceURI(), null);
+                            for (XmlSchemaSequenceMember sequenceMember : sequence.getItems()) {
 
-                            // FIXME changed
-                            while ((value = requestParameterMap.get(name)) != null) {
-                                addRequestParameter(soapFactory,
-                                                    bodyFirstChild, ns, name, value);
-                                minOccurs--;
-                            }
-                            if (minOccurs > 0) {
-                                if (nillable) {
-
-                                    OMNamespace xsi = soapFactory.createOMNamespace(
-                                            Constants.URI_DEFAULT_SCHEMA_XSI,
-                                            Constants.NS_PREFIX_SCHEMA_XSI);
-                                    OMAttribute omAttribute =
-                                            soapFactory.createOMAttribute("nil", xsi, "true");
-                                    soapFactory.createOMElement(name, ns,
-                                                                bodyFirstChild)
-                                            .addAttribute(omAttribute);
-
-                                } else {
-                                    throw new AxisFault("Required element " + qName +
-                                                        " defined in the schema can not be" +
-                                                        " found in the request");
+                                XmlSchemaElement innerElement = (XmlSchemaElement) sequenceMember;
+                                QName qName = innerElement.getQName();
+                                // ignoring the elements without proper type and minoccurs zero
+                                if ((innerElement.getSchemaTypeName() == null) &&
+                                    (innerElement.getMinOccurs() == 0)) {
+                                    continue;
                                 }
+                                if (qName == null && innerElement.getSchemaTypeName()
+                                        .equals(org.apache.ws.commons.schema.constants.Constants.XSD_ANYTYPE)) {
+                                    createSOAPMessageWithoutSchema(soapFactory, bodyFirstChild,
+                                                                   requestParameterMap);
+                                    break;
+                                }
+                                checkMinOccurs(innerElement, qName, soapFactory, requestParameterMap,
+                                               bodyFirstChild);
+                            }
+                        } else {
+                            XmlSchemaAll sequence = (XmlSchemaAll) particle;
+                            // now we need to know some information from the binding operation.
+
+                            for (XmlSchemaAllMember sequenceMember : sequence.getItems()) {
+
+                                XmlSchemaElement innerElement = (XmlSchemaElement) sequenceMember;
+                                QName qName = innerElement.getQName();
+                                // ignoring the elements without proper type and minoccurs zero
+                                if ((innerElement.getSchemaTypeName() == null) &&
+                                    (innerElement.getMinOccurs() == 0)) {
+                                    continue;
+                                }
+                                if (qName == null && innerElement.getSchemaTypeName()
+                                        .equals(org.apache.ws.commons.schema.constants.Constants.XSD_ANYTYPE)) {
+                                    createSOAPMessageWithoutSchema(soapFactory, bodyFirstChild,
+                                                                   requestParameterMap);
+                                    break;
+                                }
+                                checkMinOccurs(innerElement, qName, soapFactory, requestParameterMap,
+                                               bodyFirstChild);
                             }
                         }
                     }
+                }else {
+                    throw new AxisFault(xmlSchemaElement.getName() + " message element in schema should follow the " +
+                            "(Internationalized Resource Identifier)IRI ) style to process request in REST style");
                 }
             }
         }
         return soapEnvelope;
+    }
+
+    private static void checkMinOccurs(XmlSchemaElement innerElement, QName qName,
+                                       SOAPFactory soapFactory,
+                                       MultipleEntryHashMap requestParameterMap,
+                                       OMElement bodyFirstChild)
+            throws AxisFault {
+        long minOccurs = innerElement.getMinOccurs();
+        boolean nillable = innerElement.isNillable();
+        String name =
+                qName != null ? qName.getLocalPart() : innerElement.getName();
+        Object value;
+        OMNamespace ns = (qName == null ||
+                          qName.getNamespaceURI() == null
+                          || qName.getNamespaceURI().length() == 0) ?
+                         null : soapFactory.createOMNamespace(
+                qName.getNamespaceURI(), null);
+
+        // FIXME changed
+        while ((value = requestParameterMap.get(name)) != null) {
+            addRequestParameter(soapFactory,
+                                bodyFirstChild, ns, name, value);
+            minOccurs--;
+        }
+        if (minOccurs > 0) {
+            if (nillable) {
+
+                OMNamespace xsi = soapFactory.createOMNamespace(
+                        Constants.URI_DEFAULT_SCHEMA_XSI,
+                        Constants.NS_PREFIX_SCHEMA_XSI);
+                OMAttribute omAttribute =
+                        soapFactory.createOMAttribute("nil", xsi, "true");
+                soapFactory.createOMElement(name, ns,
+                                            bodyFirstChild)
+                        .addAttribute(omAttribute);
+
+            } else {
+                throw new AxisFault("Required element " + qName +
+                                    " defined in the schema can not be" +
+                                    " found in the request");
+            }
+        }
     }
 
     public static void createSOAPMessageWithoutSchema(SOAPFactory soapFactory,
@@ -230,22 +251,6 @@ public class BuilderUtil {
             soapFactory.createOMElement(key, ns, bodyFirstChild).setText(
                     textValue);
         }
-    }
-
-    /**
-     * @deprecated Please use {@link #createPOXBuilder(InputStream, String)} to enable usage of non
-     *             standard Axiom implementations.
-     */
-    public static StAXBuilder getPOXBuilder(InputStream inStream, String charSetEnc)
-            throws XMLStreamException {
-        StAXBuilder builder;
-        // We use the StAXParserConfiguration.SOAP here as well because we don't want to allow
-        // document type declarations (that potentially reference external entities), even
-        // in plain XML messages.
-        XMLStreamReader xmlreader =
-                StAXUtils.createXMLStreamReader(StAXParserConfiguration.SOAP, inStream, charSetEnc);
-        builder = new StAXOMBuilder(xmlreader);
-        return builder;
     }
 
     /**
@@ -430,64 +435,7 @@ public class BuilderUtil {
         return value;
     }
 
-    public static StAXBuilder getAttachmentsBuilder(MessageContext msgContext,
-                                                    InputStream inStream, String contentTypeString,
-                                                    boolean isSOAP)
-            throws OMException, XMLStreamException, FactoryConfigurationError {
-        StAXBuilder builder = null;
-        XMLStreamReader streamReader;
-
-        Attachments attachments = createAttachmentsMap(msgContext, inStream, contentTypeString);
-        String charSetEncoding = getCharSetEncoding(attachments.getRootPartContentType());
-
-        if ((charSetEncoding == null)
-            || "null".equalsIgnoreCase(charSetEncoding)) {
-            charSetEncoding = MessageContext.UTF_8;
-        }
-        msgContext.setProperty(Constants.Configuration.CHARACTER_SET_ENCODING,
-                               charSetEncoding);
-
-        streamReader = StAXUtils.createXMLStreamReader(attachments.getRootPartInputStream(), charSetEncoding);
-
-        // Setting the Attachments map to new SwA API
-        msgContext.setAttachmentMap(attachments);
-
-        String soapEnvelopeNamespaceURI = getEnvelopeNamespace(contentTypeString);
-
-        if (isSOAP) {
-            if (attachments.getAttachmentSpecType().equals(
-                    MTOMConstants.MTOM_TYPE)) {
-                //Creates the MTOM specific MTOMStAXSOAPModelBuilder
-                builder = new MTOMStAXSOAPModelBuilder(streamReader,
-                                                       attachments, soapEnvelopeNamespaceURI);
-                msgContext.setDoingMTOM(true);
-            } else if (attachments.getAttachmentSpecType().equals(
-                    MTOMConstants.SWA_TYPE)) {
-                builder = new StAXSOAPModelBuilder(streamReader,
-                                                   soapEnvelopeNamespaceURI);
-            } else if (attachments.getAttachmentSpecType().equals(
-                    MTOMConstants.SWA_TYPE_12)) {
-                builder = new StAXSOAPModelBuilder(streamReader,
-                                                   soapEnvelopeNamespaceURI);
-            }
-
-        }
-        // To handle REST XOP case
-        else {
-            if (attachments.getAttachmentSpecType().equals(MTOMConstants.MTOM_TYPE)) {
-                builder = new XOPAwareStAXOMBuilder(streamReader, attachments);
-
-            } else if (attachments.getAttachmentSpecType().equals(MTOMConstants.SWA_TYPE)) {
-                builder = new StAXOMBuilder(streamReader);
-            } else if (attachments.getAttachmentSpecType().equals(MTOMConstants.SWA_TYPE_12)) {
-                builder = new StAXOMBuilder(streamReader);
-            }
-        }
-
-        return builder;
-    }
-
-    protected static Attachments createAttachmentsMap(MessageContext msgContext,
+    public static Attachments createAttachmentsMap(MessageContext msgContext,
                                                       InputStream inStream,
                                                       String contentTypeString) {
         boolean fileCacheForAttachments = isAttachmentsCacheEnabled(msgContext);
@@ -606,27 +554,6 @@ public class BuilderUtil {
     }
 
     /**
-     * Utility method to get a StAXBuilder
-     *
-     * @param in an InputStream
-     * @return a StAXSOAPModelBuilder for the given InputStream
-     * @throws XMLStreamException
-     * @deprecated If some one really need this method, please shout.
-     */
-    public static StAXBuilder getBuilder(Reader in) throws XMLStreamException {
-        XMLStreamReader xmlreader = StAXUtils.createXMLStreamReader(in);
-        return new StAXSOAPModelBuilder(xmlreader, null);
-    }
-
-    /**
-     * @deprecated Please use {@link OMXMLBuilderFactory#createOMBuilder(InputStream)} instead.
-     */
-    public static StAXBuilder getBuilder(InputStream inStream) throws XMLStreamException {
-        XMLStreamReader xmlReader = StAXUtils.createXMLStreamReader(inStream);
-        return new StAXOMBuilder(xmlReader);
-    }
-
-    /**
      * Create a SOAP model builder. This method delegates to
      * {@link OMXMLBuilderFactory#createSOAPModelBuilder(InputStream, String)} but generates
      * additional logging if an error occurs.
@@ -645,7 +572,7 @@ public class BuilderUtil {
             log.info("OMException in getSOAPBuilder", e);
             try {
                 log.info("Remaining input stream :[" +
-                         new String(IOUtils.getStreamAsByteArray(in), encoding) + "]");
+                         new String(IOUtils.toByteArray(in), encoding) + "]");
             } catch (IOException e1) {
                 // Nothing here?
             }
@@ -654,132 +581,11 @@ public class BuilderUtil {
     }
 
     /**
-     * @deprecated Please use {@link #createSOAPModelBuilder(InputStream, String)} to enable usage
-     *             of non standard Axiom implementations.
-     */
-    public static StAXBuilder getBuilder(InputStream inStream, String charSetEnc)
-            throws XMLStreamException {
-        XMLStreamReader xmlReader = StAXUtils.createXMLStreamReader(inStream, charSetEnc);
-        try {
-            return new StAXSOAPModelBuilder(xmlReader);
-        } catch (OMException e) {
-            log.info("OMException in getSOAPBuilder", e);
-            try {
-                log.info("Remaining input stream :[" +
-                         new String(IOUtils.getStreamAsByteArray(inStream), charSetEnc) + "]");
-            } catch (IOException e1) {
-                // Nothing here?
-            }
-            throw e;
-        }
-    }
-
-    /**
-     * @deprecated Please use {@link #createSOAPModelBuilder(InputStream, String)} to enable usage
-     *             of non standard Axiom implementations.
-     */
-    public static StAXBuilder getSOAPBuilder(InputStream inStream) throws XMLStreamException {
-        XMLStreamReader xmlReader = StAXUtils.createXMLStreamReader(inStream);
-        try {
-            return new StAXSOAPModelBuilder(xmlReader);
-        } catch (OMException e) {
-            log.info("OMException in getSOAPBuilder", e);
-            try {
-                log.info("Remaining input stream :[" +
-                         new String(IOUtils.getStreamAsByteArray(inStream)) + "]");
-            } catch (IOException e1) {
-                // Nothing here?
-            }
-            throw e;
-        }
-    }
-
-    /**
-     * @deprecated Please use {@link #createSOAPModelBuilder(InputStream, String)} to enable usage
-     *             of non standard Axiom implementations.
-     */
-    public static StAXBuilder getSOAPBuilder(InputStream inStream, String charSetEnc)
-            throws XMLStreamException {
-        XMLStreamReader xmlReader = StAXUtils.createXMLStreamReader(inStream, charSetEnc);
-        try {
-            return new StAXSOAPModelBuilder(xmlReader);
-        } catch (OMException e) {
-            log.info("OMException in getSOAPBuilder", e);
-            try {
-                log.info("Remaining input stream :[" +
-                         new String(IOUtils.getStreamAsByteArray(inStream), charSetEnc) + "]");
-            } catch (IOException e1) {
-                // Nothing here?
-            }
-            throw e;
-        }
-    }
-
-    public static StAXBuilder getBuilder(SOAPFactory soapFactory, InputStream in, String charSetEnc)
-            throws XMLStreamException {
-        StAXBuilder builder;
-        XMLStreamReader xmlreader = StAXUtils.createXMLStreamReader(in, charSetEnc);
-        builder = new StAXOMBuilder(soapFactory, xmlreader);
-        return builder;
-    }
-
-    /**
-     * Initial work for a builder selector which selects the builder for a given message format
-     * based on the the content type of the recieved message. content-type to builder mapping can be
-     * specified through the Axis2.xml.
-     *
-     * @param type       content-type
-     * @param msgContext the active MessageContext
-     * @return the builder registered against the given content-type
-     * @throws AxisFault
+     * @deprecated Use {@link MessageProcessorSelector#getMessageBuilder(String, MessageContext)}.
      */
     public static Builder getBuilderFromSelector(String type, MessageContext msgContext)
             throws AxisFault {
-    	boolean useFallbackBuilder = false;
-        AxisConfiguration configuration =
-                msgContext.getConfigurationContext().getAxisConfiguration();
-        Parameter useFallbackParameter = configuration.getParameter(Constants.Configuration.USE_DEFAULT_FALLBACK_BUILDER);
-        if (useFallbackParameter !=null){
-        	useFallbackBuilder = JavaUtils.isTrueExplicitly(useFallbackParameter.getValue(),useFallbackBuilder);
-        }
-        Builder builder = configuration.getMessageBuilder(type,useFallbackBuilder);
-        if (builder != null) {
-            // Check whether the request has a Accept header if so use that as the response
-            // message type.
-            // If thats not present,
-            // Setting the received content-type as the messageType to make
-            // sure that we respond using the received message serialization format.
-
-            Object contentNegotiation = configuration
-                    .getParameterValue(Constants.Configuration.ENABLE_HTTP_CONTENT_NEGOTIATION);
-            if (JavaUtils.isTrueExplicitly(contentNegotiation)) {
-                Map transportHeaders =
-                        (Map)msgContext.getProperty(MessageContext.TRANSPORT_HEADERS);
-                if (transportHeaders != null) {
-                    String acceptHeader = (String)transportHeaders.get(HTTPConstants.HEADER_ACCEPT);
-                    if (acceptHeader != null) {
-                        int index = acceptHeader.indexOf(";");
-                        if (index > 0) {
-                            acceptHeader = acceptHeader.substring(0, index);
-                        }
-                        String[] strings = acceptHeader.split(",");
-                        for (String string : strings) {
-                            String accept = string.trim();
-                            // We dont want dynamic content negotoatin to work on text.xml as its
-                            // ambiguos as to whether the user requests SOAP 1.1 or POX response
-                            if (!HTTPConstants.MEDIA_TYPE_TEXT_XML.equals(accept) &&
-                                configuration.getMessageFormatter(accept) != null) {
-                                type = string;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            msgContext.setProperty(Constants.Configuration.MESSAGE_TYPE, type);
-        }
-        return builder;
+        return MessageProcessorSelector.getMessageBuilder(type, msgContext);
     }
 
     public static void validateSOAPVersion(String soapNamespaceURIFromTransport,

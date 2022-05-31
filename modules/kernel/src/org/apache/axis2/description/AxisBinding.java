@@ -20,6 +20,7 @@
 package org.apache.axis2.description;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -237,12 +238,12 @@ public class AxisBinding extends AxisDescription {
         }
         WSDLSerializationUtil.addWSDLDocumentationElement(this, bindingElement, omFactory, wsdl);
         WSDLSerializationUtil.addPoliciesAsExtensibleElement(this,
-				bindingElement);
+                bindingElement);
         return bindingElement;
     }
     
     public Policy getEffectivePolicy() {
-        ArrayList<PolicyComponent> policyList = new ArrayList<PolicyComponent>();
+        Collection<PolicyComponent> policyList = new ArrayList<PolicyComponent>();
         policyList.addAll(getPolicySubject().getAttachedPolicyComponents());
      
         // AxisEndpoint
@@ -273,6 +274,11 @@ public class AxisBinding extends AxisDescription {
     }
     
     public Iterator<AxisBindingOperation> getChildren(){
-    	return (Iterator<AxisBindingOperation>) super.getChildren();
+        return (Iterator<AxisBindingOperation>) super.getChildren();
+    }
+    
+    @Override
+    public void applyPolicy() throws AxisFault {
+        getAxisEndpoint().getAxisService().applyPolicy();
     }
 }

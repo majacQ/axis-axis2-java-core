@@ -195,7 +195,7 @@ public class ScriptDeploymentEngine extends DeploymentEngine {
 
             InputStream definition;
             try {
-                definition = wsdlFile.toURL().openStream();
+                definition = wsdlFile.toURI().toURL().openStream();
             } catch (Exception e) {
                 throw new AxisFault("exception opening wsdl", e);
             }
@@ -212,7 +212,7 @@ public class ScriptDeploymentEngine extends DeploymentEngine {
             axisService.addParameter(scriptSrc);
 
             ScriptReceiver scriptReceiver = new ScriptReceiver();
-            axisService.addMessageReceiver("http://www.w3.org/2004/08/wsdl/in-out", scriptReceiver);
+            axisService.addMessageReceiver("http://www.w3.org/ns/wsdl/in-out", scriptReceiver);
 
             // TODO: Shouldn't this be done by WSDLToAxisServiceBuilder.populateService?
             for (Iterator it = axisService.getOperations(); it.hasNext();) {
@@ -239,7 +239,7 @@ public class ScriptDeploymentEngine extends DeploymentEngine {
     protected String readScriptSource(File scriptFile) throws AxisFault {
         InputStream is;
         try {
-            is = scriptFile.toURL().openStream();
+            is = scriptFile.toURI().toURL().openStream();
         } catch (IOException e) {
             throw new AxisFault("IOException opening script: " + scriptFile, e);
         }

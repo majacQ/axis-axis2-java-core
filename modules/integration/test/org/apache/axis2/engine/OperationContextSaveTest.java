@@ -44,7 +44,7 @@ import org.apache.axis2.dispatchers.SOAPMessageBodyBasedDispatcher;
 import org.apache.axis2.handlers.AbstractHandler;
 import org.apache.axis2.receivers.RawXMLINOnlyMessageReceiver;
 import org.apache.axis2.receivers.RawXMLINOutMessageReceiver;
-import org.apache.axis2.transport.http.CommonsHTTPTransportSender;
+import org.apache.axis2.transport.http.impl.httpclient4.HTTPClient4TransportSender;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -107,9 +107,9 @@ public class OperationContextSaveTest extends TestCase {
         configurationContext = new ConfigurationContext(axisConfiguration);
 
         configurationContext.getAxisConfiguration().addMessageReceiver(
-                "http://www.w3.org/2004/08/wsdl/in-only", new RawXMLINOnlyMessageReceiver());
+                "http://www.w3.org/ns/wsdl/in-only", new RawXMLINOnlyMessageReceiver());
         configurationContext.getAxisConfiguration().addMessageReceiver(
-                "http://www.w3.org/2004/08/wsdl/in-out", new RawXMLINOutMessageReceiver());
+                "http://www.w3.org/ns/wsdl/in-out", new RawXMLINOutMessageReceiver());
 
         DispatchPhase dispatchPhase = new DispatchPhase();
         dispatchPhase.setName("Dispatch");
@@ -169,7 +169,7 @@ public class OperationContextSaveTest extends TestCase {
         //-----------------------------------------------------------------
 
         transportOut = new TransportOutDescription("null");
-        transportOut.setSender(new CommonsHTTPTransportSender());
+        transportOut.setSender(new HTTPClient4TransportSender());
 
         transportIn = new TransportInDescription("null");
 

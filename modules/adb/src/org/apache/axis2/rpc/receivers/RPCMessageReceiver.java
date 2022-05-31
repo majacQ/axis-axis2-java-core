@@ -25,8 +25,9 @@ package org.apache.axis2.rpc.receivers;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMNamespace;
-import org.apache.axiom.om.OMAbstractFactory;
-import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.axiom.om.OMXMLBuilderFactory;
+import org.apache.axiom.om.OMXMLParserWrapper;
+import org.apache.axiom.soap.SOAPBody;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axis2.AxisFault;
@@ -77,7 +78,7 @@ public class RPCMessageReceiver extends AbstractInOutMessageReceiver {
             // get the implementation class for the Web Service
             Object obj = getTheImplementationObject(inMessage);
 
-            Class implClass = obj.getClass();
+            Class<?> implClass = obj.getClass();
 
             AxisOperation op = inMessage.getOperationContext().getAxisOperation();
             method = (Method)(op.getParameterValue("myMethod"));
@@ -87,8 +88,11 @@ public class RPCMessageReceiver extends AbstractInOutMessageReceiver {
                 method = null;
             }
             AxisService service = inMessage.getAxisService();
-            OMElement methodElement = inMessage.getEnvelope().getBody()
-                    .getFirstElement();
+            SOAPBody body = inMessage.getEnvelope().getBody();
+            if(body==null){
+                 throw new AxisFault("SOAP body is missing in the request" );
+            }
+            OMElement methodElement = body.getFirstElement();
             AxisMessage inAxisMessage = op.getMessage(WSDLConstants.MESSAGE_LABEL_IN_VALUE);
             String messageNameSpace = null;
 
@@ -172,9 +176,9 @@ public class RPCMessageReceiver extends AbstractInOutMessageReceiver {
                 throw (AxisFault)cause;
             }
 
-            Class[] exceptionTypes = method.getExceptionTypes();
-            for (Class exceptionType : exceptionTypes){
-                if (exceptionType.getName().equals(cause.getClass().getName())){
+            Class<?>[] exceptionTypes = method.getExceptionTypes();
+            for (Class<?> exceptionType : exceptionTypes){
+                if (cause != null && exceptionType.getName().equals(cause.getClass().getName())){
                     // this is an bussiness logic exception so handle it properly
                     String partQName = inMessage.getAxisService().getName() + getSimpleClassName(exceptionType);
                     TypeTable typeTable = inMessage.getAxisService().getTypeTable();
@@ -197,8 +201,8 @@ public class RPCMessageReceiver extends AbstractInOutMessageReceiver {
                         QName innerElementQName = new QName(elementQName.getNamespaceURI(), getSimpleClassName(exceptionType));
                         XMLStreamReader xr = BeanUtil.getPullParser(cause,
                                 innerElementQName, typeTable, true, false);
-                        StAXOMBuilder stAXOMBuilder = new StAXOMBuilder(OMAbstractFactory.getOMFactory(), new StreamWrapper(xr));
-                        OMElement documentElement = stAXOMBuilder.getDocumentElement();
+                        OMXMLParserWrapper builder = OMXMLBuilderFactory.createStAXOMBuilder(new StreamWrapper(xr));
+                        OMElement documentElement = builder.getDocumentElement();
                         exceptionElement.addChild(documentElement);
                         }
                     }
@@ -222,7 +226,7 @@ public class RPCMessageReceiver extends AbstractInOutMessageReceiver {
         }
     }
 
-     private String getSimpleClassName(Class type) {
+     private String getSimpleClassName(Class<?> type) {
         String simpleClassName = type.getName();
         int idx = simpleClassName.lastIndexOf('.');
         if (idx != -1 && idx < (simpleClassName.length() - 1)) {

@@ -30,8 +30,6 @@ import org.apache.axis2.description.AxisServiceGroup;
 import org.apache.axis2.description.WSDL2Constants;
 import org.apache.axis2.engine.MessageReceiver;
 import org.apache.axis2.i18n.Messages;
-import org.apache.axis2.jsr181.JSR181Helper;
-import org.apache.axis2.jsr181.WebServiceAnnotation;
 import org.apache.axis2.util.Loader;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,7 +37,6 @@ import org.apache.commons.logging.LogFactory;
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -80,7 +77,6 @@ public class POJODeployer extends AbstractDeployer {
 
                 Thread.currentThread().setContextClassLoader(classLoader);
                 String className = Utils.getClassNameFromResourceName(file.getName());
-                Class<?> clazz = Loader.loadClass(className);
                 log.info(Messages.getMessage(DeploymentErrorMsgs.DEPLOYING_POJO,
                         serviceHierarchy + className,
                         deploymentFileData.getFile().getAbsolutePath()));
@@ -94,22 +90,13 @@ public class POJODeployer extends AbstractDeployer {
                  * nothing will happen) 2. In the next stage for all the methods
                  * messages and port types will be creteated
                  */
-                WebServiceAnnotation annotation =
-                        JSR181Helper.INSTANCE.getWebServiceAnnotation(clazz);
-                AxisService axisService;
-                if (annotation != null) {
-                    // try to see whether JAX-WS jars in the class path , if so use them
-                    // to process annotated pojo else use annogen to process the pojo class
-                    axisService =
-                            createAxisService(classLoader,
-                                    className,
-                                    deploymentFileData.getFile().toURL());
-                } else {
-                    axisService =
+                
+                AxisService axisService;               
+                axisService =
                             createAxisServiceUsingAnnogen(className,
                                     classLoader,
-                                    deploymentFileData.getFile().toURL());
-                }
+                                    deploymentFileData.getFile().toURI().toURL());
+                
                 //add the hierarchical path to the service name
                 axisService.setName(serviceHierarchy + axisService.getName());
                 configCtx.getAxisConfiguration().addService(axisService);
@@ -118,22 +105,20 @@ public class POJODeployer extends AbstractDeployer {
                 List<String> classList = Utils.getListOfClasses(deploymentFileData);
                 ArrayList<AxisService> axisServiceList = new ArrayList<AxisService>();
                 for (String className : classList) {
-                    ArrayList<URL> urls = new ArrayList<URL>();
-                    urls.add(deploymentFileData.getFile().toURL());
-                    urls.add(configCtx.getAxisConfiguration().getRepository());
+                    List<URL> extraUrls = new ArrayList<>();
+                    extraUrls.add(configCtx.getAxisConfiguration().getRepository());
                     String webLocation = DeploymentEngine.getWebLocationString();
                     if (webLocation != null) {
-                        urls.add(new File(webLocation).toURL());
+                        extraUrls.add(new File(webLocation).toURI().toURL());
                     }
                     ClassLoader classLoader = Utils.createClassLoader(
-                            urls,
+                            deploymentFileData.getFile().toURI().toURL(),
+                            extraUrls.toArray(new URL[extraUrls.size()]),
                             configCtx.getAxisConfiguration().getSystemClassLoader(),
-                            true,
                             (File)configCtx.getAxisConfiguration().
                                     getParameterValue(Constants.Configuration.ARTIFACTS_TEMP_DIR),
                             configCtx.getAxisConfiguration().isChildFirstClassLoading());
-                    Thread.currentThread().setContextClassLoader(classLoader);
-                    Class<?> clazz = Loader.loadClass(className);
+                    Thread.currentThread().setContextClassLoader(classLoader);                    
 
                     /**
                      * Schema generation done in two stage 1. Load all the methods and
@@ -142,17 +127,8 @@ public class POJODeployer extends AbstractDeployer {
                      * parameters are simple type which decribe in SimpleTypeTable
                      * nothing will happen) 2. In the next stage for all the methods
                      * messages and port types will be creteated
-                     */
-                    WebServiceAnnotation annotation =
-                            JSR181Helper.INSTANCE.getWebServiceAnnotation(clazz);
-                    if (annotation != null) {
-                        AxisService axisService;
-                        axisService =
-                                createAxisService(classLoader,
-                                                  className,
-                                                  deploymentFileData.getFile().toURL());
-                        axisServiceList.add(axisService);
-                    }
+                     */                  
+                   
                 }
 
                 if (axisServiceList.size() > 0) {
@@ -196,56 +172,7 @@ public class POJODeployer extends AbstractDeployer {
         String error = "Error:\n" + errorWriter.toString();
         configCtx.getAxisConfiguration().getFaultyServices().
                 put(deploymentFileData.getFile().getAbsolutePath(), error);
-    }
-
-    private AxisService createAxisService(ClassLoader classLoader,
-                                          String className,
-                                          URL serviceLocation) throws ClassNotFoundException,
-            InstantiationException,
-            IllegalAccessException,
-            AxisFault {
-        AxisService axisService;
-        try {
-            Class<?> claxx = Class.forName(
-                    "org.apache.axis2.jaxws.description.DescriptionFactory");
-            Method mthod = claxx.getMethod("createAxisService", Class.class);
-            Class<?> pojoClass = Loader.loadClass(classLoader, className);
-            axisService = (AxisService) mthod.invoke(claxx, pojoClass);
-            if (axisService != null) {
-                Iterator<AxisOperation> operations = axisService.getOperations();
-                while (operations.hasNext()) {
-                    AxisOperation axisOperation = operations.next();
-                    if (axisOperation.getMessageReceiver() == null) {
-                        try {
-                            Class<?> jaxwsMR = Loader.loadClass(
-                                    "org.apache.axis2.jaxws.server.JAXWSMessageReceiver");
-                            MessageReceiver jaxwsMRInstance =
-                                    (MessageReceiver) jaxwsMR.newInstance();
-                            axisOperation.setMessageReceiver(jaxwsMRInstance);
-                        } catch (Exception e) {
-                            log.debug("Error occurde while loading JAXWSMessageReceiver for "
-                                    + className );
-                        }
-                    }
-                }
-            }
-            axisService.setElementFormDefault(false);
-            axisService.setFileName(serviceLocation);
-            Utils.fillAxisService(axisService,
-                    configCtx.getAxisConfiguration(),
-                    new ArrayList<String>(),
-                    new ArrayList<String>());
-            //Not needed at this case, the message receivers always set to RPC if this executes
-            //setMessageReceivers(axisService);
-            
-        } catch (Exception e) {
-            // Seems like the jax-ws jars missing in the class path .
-            // lets try with annogen
-            log.info(Messages.getMessage(DeploymentErrorMsgs.JAXWS_JARS_MISSING,e.getMessage()),e);
-            axisService = createAxisServiceUsingAnnogen(className, classLoader, serviceLocation);
-        }
-        return axisService;
-    }
+    }  
 
     private AxisService createAxisServiceUsingAnnogen(String className,
                                                       ClassLoader classLoader,

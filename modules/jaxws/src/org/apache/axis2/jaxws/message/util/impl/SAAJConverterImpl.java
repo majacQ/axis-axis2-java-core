@@ -20,20 +20,18 @@
 package org.apache.axis2.jaxws.message.util.impl;
 
 import org.apache.axiom.attachments.Attachments;
+import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMElement;
-import org.apache.axiom.om.OMException;
 import org.apache.axiom.om.OMNamespace;
-import org.apache.axiom.om.impl.builder.StAXOMBuilder;
-import org.apache.axiom.om.impl.dom.ElementImpl;
+import org.apache.axiom.om.OMXMLBuilderFactory;
+import org.apache.axiom.om.OMXMLParserWrapper;
 import org.apache.axiom.om.util.StAXUtils;
 import org.apache.axiom.soap.SOAP11Constants;
 import org.apache.axiom.soap.SOAP12Constants;
-import org.apache.axiom.soap.impl.builder.MTOMStAXSOAPModelBuilder;
-import org.apache.axiom.soap.impl.builder.StAXSOAPModelBuilder;
+import org.apache.axiom.soap.SOAPModelBuilder;
 import org.apache.axis2.jaxws.ExceptionFactory;
 import org.apache.axis2.jaxws.i18n.Messages;
 import org.apache.axis2.jaxws.message.util.SAAJConverter;
-import org.apache.axis2.jaxws.message.util.SOAPElementReader;
 import org.apache.axis2.jaxws.utility.JavaUtils;
 import org.apache.axis2.jaxws.utility.SAAJFactory;
 import org.apache.commons.logging.Log;
@@ -138,15 +136,15 @@ public class SAAJConverterImpl implements SAAJConverter {
     	
     	// Before we do the conversion, we have to fix the QNames for fault elements
         _fixFaultElements(saajEnvelope);        
-        // Get a XMLStreamReader backed by a SOAPElement tree
-        XMLStreamReader reader = new SOAPElementReader(saajEnvelope);
-        
-        // Get a SOAP OM Builder.  Passing null causes the version to be automatically triggered
-        StAXSOAPModelBuilder builder = null;
-        if (attachments == null) {
-            builder = new StAXSOAPModelBuilder(reader, null);
+        SOAPModelBuilder builder;
+        if (attachments != null) {
+            builder = OMXMLBuilderFactory.createSOAPModelBuilder(
+                    OMAbstractFactory.getMetaFactory(),
+                    new DOMSource(saajEnvelope),
+                    attachments);
         } else {
-            builder = new MTOMStAXSOAPModelBuilder(reader, attachments, null);
+            // Get a SOAP OM Builder.
+            builder = OMXMLBuilderFactory.createSOAPModelBuilder(new DOMSource(saajEnvelope));
         }
         // Create and return the OM Envelope
         org.apache.axiom.soap.SOAPEnvelope omEnvelope = builder.getSOAPEnvelope();
@@ -186,8 +184,8 @@ public class SAAJConverterImpl implements SAAJConverter {
         } catch (XMLStreamException e) {
             throw ExceptionFactory.makeWebServiceException(e);
         }
-        // Get a SOAP OM Builder.  Passing null causes the version to be automatically triggered
-        StAXSOAPModelBuilder builder = new StAXSOAPModelBuilder(reader, null);
+        // Get a SOAP OM Builder.
+        SOAPModelBuilder builder = OMXMLBuilderFactory.createStAXSOAPModelBuilder(reader);
         // Create and return the OM Envelope
         return builder.getSOAPEnvelope();
     }
@@ -209,10 +207,8 @@ public class SAAJConverterImpl implements SAAJConverter {
     		log.debug("The conversion occurs due to " + JavaUtils.stackToString());
     	}
     	
-        // Get a XMLStreamReader backed by a SOAPElement tree
-        XMLStreamReader reader = new SOAPElementReader(soapElement);
         // Get a OM Builder.
-        StAXOMBuilder builder = new StAXOMBuilder(reader);
+        OMXMLParserWrapper builder = OMXMLBuilderFactory.createOMBuilder(new DOMSource(soapElement));
         // Create and return the Element
         OMElement om = builder.getDocumentElement();
         // TODO The following statement expands the OM tree.  This is 
@@ -364,8 +360,7 @@ public class SAAJConverterImpl implements SAAJConverter {
                         break;
                     }
                     case XMLStreamReader.END_DOCUMENT: {
-                        // Close reader and ignore
-                        reader.close();
+                        // Ignore
                         break;
                     }
                     case XMLStreamReader.PROCESSING_INSTRUCTION: {
@@ -384,6 +379,7 @@ public class SAAJConverterImpl implements SAAJConverter {
                         this._unexpectedEvent("EventID " + String.valueOf(eventID));
                 }
             }
+            reader.close();
         } catch (WebServiceException e) {
             throw e;
         } catch (XMLStreamException e) {
@@ -631,8 +627,8 @@ public class SAAJConverterImpl implements SAAJConverter {
                         // get that and add it as a text node under the original element.
                         Node value = se.getFirstChild();
                         if (value != null && value instanceof org.apache.axis2.saaj.SOAPElementImpl) {
-                            org.apache.axis2.saaj.SOAPElementImpl valueElement = (org.apache.axis2.saaj.SOAPElementImpl) value;
-                            ElementImpl e = valueElement.getElement();
+                            org.apache.axis2.saaj.SOAPElementImpl<?> valueElement = (org.apache.axis2.saaj.SOAPElementImpl<?>) value;
+                            OMElement e = valueElement.getOMTarget();
                             String content = e.getText();
                             
                             SOAPElement child = fault.addChildElement(new QName(se.getNamespaceURI(), SOAP11Constants.SOAP_FAULT_CODE_LOCAL_NAME));
@@ -656,8 +652,8 @@ public class SAAJConverterImpl implements SAAJConverter {
                         // get that and add it as a text node under the original element.
                         Node value = se.getFirstChild();
                         if (value != null && value instanceof org.apache.axis2.saaj.SOAPElementImpl) {
-                            org.apache.axis2.saaj.SOAPElementImpl valueElement = (org.apache.axis2.saaj.SOAPElementImpl) value;
-                            ElementImpl e = valueElement.getElement();
+                            org.apache.axis2.saaj.SOAPElementImpl<?> valueElement = (org.apache.axis2.saaj.SOAPElementImpl<?>) value;
+                            OMElement e = valueElement.getOMTarget();
                             String content = e.getText();
                            
                             SOAPElement child = fault.addChildElement(new QName(se.getNamespaceURI(), SOAP11Constants.SOAP_FAULT_STRING_LOCAL_NAME));

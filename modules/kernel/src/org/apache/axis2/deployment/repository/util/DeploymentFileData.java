@@ -39,6 +39,7 @@ public class DeploymentFileData {
     private ClassLoader classLoader;
     private Deployer deployer;
     private URL url;
+    private Object serviceMetaData;
 
     public URL getUrl() {
         return url;
@@ -81,18 +82,14 @@ public class DeploymentFileData {
      * @return the name of the referenced file
      */
     public String getName() {
-        return file.getName(); // No need to check for null due to constructor check
+        if (file != null) {
+            return file.getName();
+        } else {
+            String path = url.getPath();
+            return path.substring(path.lastIndexOf('/') + 1);
+        }
     }
 
-    /**
-     * Get the name of the file.
-     *
-     * @return the name of the referenced file
-     * @deprecated please use getName() instead - this will disappear after 1.3.
-     */
-    public String getServiceName() {
-        return getName();
-    }
 
     public static boolean isModuleArchiveFile(String filename) {
         return (filename.endsWith(".mar"));
@@ -126,8 +123,7 @@ public class DeploymentFileData {
                         throw new AxisFault(Messages.getMessage(DeploymentErrorMsgs.FILE_NOT_FOUND,
                                                                 this.file.getAbsolutePath()));
                     }
-                    urlsToLoadFrom = new URL[]{this.file.toURL()};
-                    classLoader = Utils.createClassLoader(urlsToLoadFrom, parent, true, file, isChildFirstClassLoading);
+                    classLoader = Utils.createClassLoader(this.file.toURI().toURL(), null, parent, file, isChildFirstClassLoading);
                 } catch (Exception e) {
                     throw AxisFault.makeFault(e);
                 }
@@ -148,6 +144,17 @@ public class DeploymentFileData {
     }
 
     public void deploy() throws DeploymentException {
-        deployer.deploy(this);
+        if( deployer != null){
+            deployer.deploy(this);            
+        }
     }
+
+    public Object getServiceMetaData() {
+        return serviceMetaData;
+    }
+
+    public void setServiceMetaData(Object serviceMetaData) {
+        this.serviceMetaData = serviceMetaData;
+    }    
+    
 }

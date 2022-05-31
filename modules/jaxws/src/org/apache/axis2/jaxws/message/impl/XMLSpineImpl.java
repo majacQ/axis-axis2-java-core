@@ -20,11 +20,9 @@
 package org.apache.axis2.jaxws.message.impl;
 
 import org.apache.axiom.om.OMAbstractFactory;
-import org.apache.axiom.om.OMContainer;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMNamespace;
 import org.apache.axiom.om.OMNode;
-import org.apache.axiom.om.impl.OMContainerEx;
 import org.apache.axiom.soap.RolePlayer;
 import org.apache.axiom.soap.SOAP11Constants;
 import org.apache.axiom.soap.SOAP12Constants;
@@ -43,17 +41,14 @@ import org.apache.axis2.jaxws.message.Protocol;
 import org.apache.axis2.jaxws.message.XMLFault;
 import org.apache.axis2.jaxws.message.factory.BlockFactory;
 import org.apache.axis2.jaxws.message.factory.OMBlockFactory;
-import org.apache.axis2.jaxws.message.util.MessageUtils;
 import org.apache.axis2.jaxws.message.util.Reader2Writer;
 import org.apache.axis2.jaxws.message.util.XMLFaultUtils;
 import org.apache.axis2.jaxws.registry.FactoryRegistry;
-import org.apache.axis2.jaxws.utility.JavaUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import javax.jws.soap.SOAPBinding.Style;
 import javax.xml.namespace.QName;
-import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
@@ -141,13 +136,10 @@ class XMLSpineImpl implements XMLSpine {
      */
     private void init(SOAPEnvelope envelope) throws WebServiceException {
         root = envelope;
-        soapFactory = MessageUtils.getSOAPFactory(root);
+        soapFactory = (SOAPFactory)envelope.getOMFactory();
 
         // Advance past the header
-        SOAPHeader header = root.getHeader();
-        if (header == null) {
-            header = soapFactory.createSOAPHeader(root);
-        }
+        root.getOrCreateHeader();
 
         // Now advance the parser to the body element
         SOAPBody body = root.getBody();
@@ -191,15 +183,7 @@ class XMLSpineImpl implements XMLSpine {
     }
 
     public XMLStreamReader getXMLStreamReader(boolean consume) throws WebServiceException {
-        if (consume) {
-            if (root.getBuilder() != null && !root.getBuilder().isCompleted()) {
-                return root.getXMLStreamReaderWithoutCaching();
-            } else {
-                return root.getXMLStreamReader();
-            }
-        } else {
-            return root.getXMLStreamReader();
-        }
+        return root.getXMLStreamReader(!consume);
     }
 
     /* (non-Javadoc)
@@ -219,7 +203,7 @@ class XMLSpineImpl implements XMLSpine {
             SOAPFaultDetail detail = root.getBody().getFault().getDetail();
             for (int i = 0; i < numDetailBlocks; i++) {
                 OMElement om = this._getChildOMElement(detail, i);
-                blocks[i] = this._getBlockFromOMElement(om, null, obf, false);
+                blocks[i] = this._getBlockFromOMElement(om, null, obf);
 
             }
         }
@@ -316,7 +300,7 @@ class XMLSpineImpl implements XMLSpine {
         if (log.isDebugEnabled()) {
             log.debug("getBodyBlock: Found omElement " + omElement.getQName());
         }
-        return this._getBlockFromOMElement(omElement, context, blockFactory, false);
+        return this._getBlockFromOMElement(omElement, context, blockFactory);
     }
 
     /* (non-Javadoc)
@@ -349,7 +333,7 @@ class XMLSpineImpl implements XMLSpine {
         if (log.isDebugEnabled()) {
             log.debug("getBodyBlock: Found omElement " + omElement.getQName());
         }
-        return this._getBlockFromOMElement(omElement, context, blockFactory, true);
+        return this._getBlockFromOMElement(omElement, context, blockFactory);
     }
 
     public void setBodyBlock(int index, Block block) throws WebServiceException {
@@ -446,7 +430,7 @@ class XMLSpineImpl implements XMLSpine {
         if (om == null) {
             return null;
         }
-        return this._getBlockFromOMElement(om, context, blockFactory, false);
+        return this._getBlockFromOMElement(om, context, blockFactory);
     }
 
     public List<Block> getHeaderBlocks(String namespace, 
@@ -478,7 +462,7 @@ class XMLSpineImpl implements XMLSpine {
                 // _getBlockFromOMElement may replace the current element; move the iterator to the
                 // next element to avoid ConcurrentModificationException
                 it.hasNext();
-                Block block = _getBlockFromOMElement(om, context, blockFactory, false);
+                Block block = _getBlockFromOMElement(om, context, blockFactory);
                 blocks.add(block);
             }
         }
@@ -508,10 +492,7 @@ class XMLSpineImpl implements XMLSpine {
                 _createOMElementFromBlock(localPart, ns, block, soapFactory, true);
         OMElement om = this._getChildOMElement(root.getHeader(), namespace, localPart);
         if (om == null) {
-            if (root.getHeader() == null) {
-                soapFactory.createSOAPHeader(root);
-            }
-            root.getHeader().addChild(newOM);
+            root.getOrCreateHeader().addChild(newOM);
         } else {
             om.insertSiblingBefore(newOM);
             om.detach();
@@ -524,10 +505,7 @@ class XMLSpineImpl implements XMLSpine {
         OMNamespace ns = soapFactory.createOMNamespace(namespace, null);
         OMElement newOM =
             _createOMElementFromBlock(localPart, ns, block, soapFactory, true);
-        if (root.getHeader() == null) {
-            soapFactory.createSOAPHeader(root);
-        }
-        root.getHeader().addChild(newOM);
+        root.getOrCreateHeader().addChild(newOM);
     }
 
 
@@ -578,8 +556,7 @@ class XMLSpineImpl implements XMLSpine {
         }
     }
 
-    private Block _getBlockFromOMElement(OMElement om, Object context, BlockFactory blockFactory,
-                                         boolean setComplete) throws WebServiceException {
+    private Block _getBlockFromOMElement(OMElement om, Object context, BlockFactory blockFactory) throws WebServiceException {
         try {
             QName qName = om.getQName();
             OMNamespace ns = om.getNamespace();
@@ -617,53 +594,14 @@ class XMLSpineImpl implements XMLSpine {
             // Get the business object to force a parse
             block.getBusinessObject(false);
 
-            // Replace the OMElement with the OMSourcedElement that delegates to the block
-            OMElement newOM = _createOMElementFromBlock(qName.getLocalPart(), ns, block, soapFactory, 
-                                                            (om.getParent() instanceof SOAPHeader));
-            om.insertSiblingBefore(newOM);
-
-            // We want to set the om element and its parents to complete to 
-            // shutdown the parsing.  
-            if (setComplete) {
-                
-                // Get the root of the document
-                OMElement root = om;
-                while(root.getParent() instanceof OMElement) {
-                    root = (OMElement) root.getParent();
-                }
-                
-                try {   
-                    if (!root.isComplete() && root.getBuilder() != null && 
-                            !root.getBuilder().isCompleted()) {
-                        // Forward the parser to the end so it will close
-                        while (root.getBuilder().next() != XMLStreamConstants.END_DOCUMENT) {
-                            //do nothing
-                        }                    
-                    }
-                } catch (Exception e) {
-                    // Log and continue
-                    if (log.isDebugEnabled()) {
-                        log.debug("Builder next error:" + e.getMessage());
-                        log.trace(JavaUtils.stackToString(e));
-                    }
-                    
-                }
-                
-
-                OMContainer o = om;
-                while (o != null && o instanceof OMContainerEx) {
-                    ((OMContainerEx)o).setComplete(true);
-                    if ((o instanceof OMNode) &&
-                            (((OMNode)o).getParent()) instanceof OMContainer) {
-                        o = ((OMNode)o).getParent();
-                    } else {
-                        o = null;
-                    }
-                }
+            if (!(om instanceof SOAPFault)) {
+                // Replace the OMElement with the OMSourcedElement that delegates to the block. Note that
+                // this can be done for plain OMElements and SOAPHeaderBlocks, but not SOAPFaults.
+                OMElement newOM = _createOMElementFromBlock(qName.getLocalPart(), ns, block, soapFactory, 
+                                                                (om.getParent() instanceof SOAPHeader));
+                om.insertSiblingBefore(newOM);
+                om.detach();
             }
-
-
-            om.detach();
             return block;
         } catch (XMLStreamException xse) {
             throw ExceptionFactory.makeWebServiceException(xse);
@@ -802,9 +740,9 @@ class XMLSpineImpl implements XMLSpine {
             return null;
         }
         QName qName = new QName(namespace, localPart);
-        Iterator it = om.getChildrenWithName(qName);
+        Iterator<OMElement> it = om.getChildrenWithName(qName);
         if (it != null && it.hasNext()) {
-            return (OMElement)it.next();
+            return it.next();
         }
         return null;
     }

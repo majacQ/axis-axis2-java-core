@@ -33,7 +33,6 @@ import org.apache.axiom.soap.SOAPHeaderBlock;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.Constants;
 import org.apache.axis2.client.async.AxisCallback;
-import org.apache.axis2.client.async.Callback;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.context.OperationContext;
@@ -122,17 +121,6 @@ public class AxisEngine {
             receiver = msgContext.getAxisOperation().getMessageReceiver();
         }
         return (receiver!=null && receiver.getClass().getName().endsWith("JAXWSMessageReceiver"));
-    }
-    /**
-     * This method is called to handle any error that occurs at inflow or outflow. But if the
-     * method is called twice, it implies that sending the error handling has failed, in which case
-     * the method logs the error and exists.
-     *
-     * @deprecated (post 1.1 branch)
-     */
-    public static MessageContext createFaultMessageContext(MessageContext processingContext, Throwable e)
-            throws AxisFault {
-        return MessageContextBuilder.createFaultMessageContext(processingContext, e);
     }
 
     /**
@@ -637,20 +625,13 @@ public class AxisEngine {
                                     .lookupCallback(msgctx.getMessageID());
                             if (callback == null) return; // TODO: should we log this??
                             
-                            if (callback instanceof Callback) {
-                                // Instances of Callback only expect onComplete to be called
-                                // for a successful MEP.  Errors are reported through the
-                                // Async Response object, which the Callback implementations 
-                                // all use.
-                                ((Callback)callback).onError(e);
-                            } else {
-                                // The AxisCallback (which is OutInAxisOperationClient$SyncCallBack
-                                // used to support async-on-the-wire under a synchronous API 
-                                // operation) need to be told the MEP is complete after being told
-                                // of the error.
-                                ((AxisCallback)callback).onError(e);
-                                ((AxisCallback)callback).onComplete();
-                            }
+                            // The AxisCallback (which is OutInAxisOperationClient$SyncCallBack
+                            // used to support async-on-the-wire under a synchronous API 
+                            // operation) need to be told the MEP is complete after being told
+                            // of the error.
+                            ((AxisCallback)callback).onError(e);
+                            ((AxisCallback)callback).onComplete();                            
+  
                         }
                     }
                 }

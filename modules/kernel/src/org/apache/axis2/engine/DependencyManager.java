@@ -22,18 +22,23 @@ package org.apache.axis2.engine;
 
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.Constants;
+import org.apache.axis2.classloader.ThreadContextDescriptor;
+import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.context.ServiceContext;
 import org.apache.axis2.context.ServiceGroupContext;
 import org.apache.axis2.description.AxisService;
 import org.apache.axis2.description.AxisServiceGroup;
 import org.apache.axis2.description.Parameter;
+import org.apache.axis2.i18n.Messages;
 import org.apache.axis2.service.Lifecycle;
 import org.apache.axis2.util.Loader;
+import org.apache.axis2.util.Utils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.security.PrivilegedAction;
 import java.util.Iterator;
 
 /**
@@ -43,22 +48,7 @@ import java.util.Iterator;
 public class DependencyManager {
     private static final Log log = LogFactory.getLog(DependencyManager.class);
     public final static String SERVICE_INIT_METHOD = "init";
-    public final static String SERVICE_DESTROY_METHOD = "destroy";
-
-    /**
-     * Initialize a new service object.  Essentially, check to see if the object wants to receive
-     * an init() call - if so, call it.
-     *
-     * @param obj the service object
-     * @param serviceContext the active ServiceContext
-     * @throws AxisFault if there's a problem initializing
-     * 
-     * @deprecated please use initServiceObject()
-     */
-    public static void initServiceClass(Object obj, ServiceContext serviceContext)
-            throws AxisFault {
-        initServiceObject(obj, serviceContext);
-    }
+    public final static String SERVICE_DESTROY_METHOD = "destroy";   
 
     /**
      * Initialize a new service object.  Essentially, check to see if the object wants to receive
@@ -79,7 +69,7 @@ public class DependencyManager {
         // ...however, we also still support the old way for now.  Note that introspecting for
         // a method like this is something like 10 times slower than the above instanceof check.
 
-        Class classToLoad = obj.getClass();
+        Class<?> classToLoad = obj.getClass();
         // We can not call classToLoad.getDeclaredMethed() , since there
         //  can be insatnce where mutiple services extends using one class
         // just for init and other reflection methods
@@ -124,18 +114,31 @@ public class DependencyManager {
             Parameter implInfoParam = service.getParameter(Constants.SERVICE_CLASS);
             if (implInfoParam != null) {
                 try {
-                    Class implClass = Loader.loadClass(
+                    ThreadContextDescriptor tc = ThreadContextDescriptor.setThreadContext(axisService);
+                    Class<?> implClass = Loader.loadClass(
                             classLoader,
                             ((String) implInfoParam.getValue()).trim());
-                    Object serviceImpl = implClass.newInstance();
+                    Object serviceImpl = makeNewServiceObject(service);
                     serviceContext.setProperty(ServiceContext.SERVICE_OBJECT, serviceImpl);
                     initServiceObject(serviceImpl, serviceContext);
+                    restoreThreadContext(tc);
                 } catch (Exception e) {
                     throw AxisFault.makeFault(e);
                 }
             }
         }
     }
+    
+    protected static Object makeNewServiceObject(AxisService service) throws AxisFault {
+        Object serviceObject = Utils.createServiceObject(service);
+        if (serviceObject == null) {
+            throw new AxisFault(
+                    Messages.getMessage("paramIsNotSpecified", "SERVICE_OBJECT_SUPPLIER"));
+        } else {
+            return serviceObject;
+        }
+    }
+        
 
     /**
      * Notify a service object that it's on death row.
@@ -152,7 +155,7 @@ public class DependencyManager {
 
             // For now, we also use "raw" introspection to try and find the destroy method.
 
-            Class classToLoad = obj.getClass();
+            Class<?> classToLoad = obj.getClass();
             Method method =
                     null;
             try {
@@ -174,5 +177,15 @@ public class DependencyManager {
             }
 
         }
+    }
+
+    protected static void restoreThreadContext(final ThreadContextDescriptor tc) {
+        org.apache.axis2.java.security.AccessController.doPrivileged(new PrivilegedAction() {
+            public Object run() {
+                Thread.currentThread().setContextClassLoader(tc.getOldClassLoader());
+                return null;
+            }
+        });
+        MessageContext.currentMessageContext.set(tc.getOldMessageContext());
     }
 }

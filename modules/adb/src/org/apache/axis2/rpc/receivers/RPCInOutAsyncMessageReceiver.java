@@ -21,6 +21,7 @@ package org.apache.axis2.rpc.receivers;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMNamespace;
+import org.apache.axiom.soap.SOAPBody;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axis2.AxisFault;
@@ -31,7 +32,7 @@ import org.apache.axis2.description.AxisService;
 import org.apache.axis2.description.Parameter;
 import org.apache.axis2.description.WSDL2Constants;
 import org.apache.axis2.description.java2wsdl.Java2WSDLConstants;
-import org.apache.axis2.receivers.AbstractInMessageReceiver;
+import org.apache.axis2.receivers.AbstractMessageReceiver;
 import org.apache.axis2.wsdl.WSDLConstants;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,7 +40,7 @@ import org.apache.commons.logging.LogFactory;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-public class RPCInOutAsyncMessageReceiver extends AbstractInMessageReceiver {
+public class RPCInOutAsyncMessageReceiver extends AbstractMessageReceiver {
 
     private static Log log = LogFactory.getLog(RPCInOnlyMessageReceiver.class);
 
@@ -71,8 +72,11 @@ public class RPCInOutAsyncMessageReceiver extends AbstractInMessageReceiver {
 
             AxisOperation op = inMessage.getOperationContext().getAxisOperation();
             AxisService service = inMessage.getAxisService();
-            OMElement methodElement = inMessage.getEnvelope().getBody()
-                    .getFirstElement();
+            SOAPBody body = inMessage.getEnvelope().getBody();
+            if(body==null){
+                throw new AxisFault("SOAP body is missing in the request" );
+            }
+            OMElement methodElement = body.getFirstElement();
 
             AxisMessage inaxisMessage = op.getMessage(WSDLConstants.MESSAGE_LABEL_IN_VALUE);
             String messageNameSpace = null;

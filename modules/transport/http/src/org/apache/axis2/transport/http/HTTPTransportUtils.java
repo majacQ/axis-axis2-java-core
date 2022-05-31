@@ -54,6 +54,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.SocketException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
@@ -273,10 +275,10 @@ public class HTTPTransportUtils {
             if (soapVersion == VERSION_SOAP11) {
                 // TODO Keith : Do we need this anymore
                 // Deployment configuration parameter
-                Parameter enableREST = msgContext
-                        .getParameter(Constants.Configuration.ENABLE_REST);
-                if ((soapActionHeader == null) && (enableREST != null)) {
-                    if (Constants.VALUE_TRUE.equals(enableREST.getValue())) {
+                Parameter disableREST = msgContext
+                        .getParameter(Constants.Configuration.DISABLE_REST);
+                if (soapActionHeader == null && disableREST != null) {
+                    if (Constants.VALUE_FALSE.equals(disableREST.getValue())) {
                         // If the content Type is text/xml (BTW which is the
                         // SOAP 1.1 Content type ) and the SOAP Action is
                         // absent it is rest !!
@@ -381,5 +383,21 @@ public class HTTPTransportUtils {
         epr.append(serviceName);
         epr.append('/');
         return new EndpointReference[]{new EndpointReference(epr.toString())};
+    }
+
+    static InputStream getMetaInfResourceAsStream(AxisService service, String name) {
+        ClassLoader classLoader = service.getClassLoader();
+        if (classLoader instanceof URLClassLoader) {
+            // Only search the service class loader and skip searching the ancestors to
+            // avoid local file inclusion vulnerabilities such as AXIS2-5846.
+            URL url = ((URLClassLoader)classLoader).findResource("META-INF/" + name);
+            try {
+                return url == null ? null : url.openStream();
+            } catch (IOException ex) {
+                return null;
+            }
+        } else {
+            return null;
+        }
     }
 }

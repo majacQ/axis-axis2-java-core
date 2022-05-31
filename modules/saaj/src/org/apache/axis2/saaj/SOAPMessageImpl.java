@@ -20,18 +20,18 @@
 package org.apache.axis2.saaj;
 
 import org.apache.axiom.attachments.Attachments;
+import org.apache.axiom.mime.ContentType;
+import org.apache.axiom.mime.MediaType;
 import org.apache.axiom.om.OMException;
 import org.apache.axiom.om.OMOutputFormat;
 import org.apache.axiom.om.impl.OMMultipartWriter;
 import org.apache.axiom.soap.SOAPEnvelope;
-import org.apache.axiom.soap.impl.dom.soap11.SOAP11Factory;
-import org.apache.axiom.soap.impl.dom.soap12.SOAP12Factory;
+import org.apache.axiom.soap.SOAPFactory;
+import org.apache.axiom.soap.SOAPVersion;
 import org.apache.axiom.util.UIDGenerator;
 import org.apache.axis2.saaj.util.SAAJUtil;
 import org.apache.axis2.transport.http.HTTPConstants;
 
-import javax.mail.internet.ContentType;
-import javax.mail.internet.ParseException;
 import javax.xml.soap.AttachmentPart;
 import javax.xml.soap.MimeHeader;
 import javax.xml.soap.MimeHeaders;
@@ -45,6 +45,7 @@ import javax.xml.soap.SOAPPart;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Hashtable;
@@ -62,12 +63,7 @@ public class SOAPMessageImpl extends SOAPMessage {
 
     public SOAPMessageImpl(SOAPEnvelopeImpl soapEnvelope) {
         this.mimeHeaders = new MimeHeaders();
-        if (soapEnvelope.getOMFactory() instanceof SOAP11Factory) {
-            this.mimeHeaders.addHeader("content-type", HTTPConstants.MEDIA_TYPE_TEXT_XML);
-        } else if (soapEnvelope.getOMFactory() instanceof SOAP12Factory) {
-            this.mimeHeaders.addHeader("content-type",
-                    HTTPConstants.MEDIA_TYPE_APPLICATION_SOAP_XML);
-        }
+        this.mimeHeaders.addHeader("content-type", ((SOAPFactory)soapEnvelope.omTarget.getOMFactory()).getSOAPVersion().getMediaType().toString());
         soapPart = new SOAPPartImpl(this, soapEnvelope);
     }
 
@@ -274,23 +270,20 @@ public class SOAPMessageImpl extends SOAPMessage {
     public void saveChanges() throws SOAPException {
         try {
             String contentTypeValue = getSingleHeaderValue(HTTPConstants.HEADER_CONTENT_TYPE);
-            ContentType contentType = null;
+            ContentType.Builder contentType;
             if (isEmptyString(contentTypeValue)) {
-                if (attachmentParts.size() > 0) {
-                    contentTypeValue = HTTPConstants.MEDIA_TYPE_MULTIPART_RELATED;
-                } else {
-                    contentTypeValue = getBaseType();
+                contentType = ContentType.builder().setMediaType(attachmentParts.size() > 0 ? MediaType.MULTIPART_RELATED : getMediaType());
+            } else {
+                contentType = new ContentType(contentTypeValue).toBuilder();
+                //Use configures the baseType with multipart/related while no attachment exists or all the attachments are removed
+                if (contentType.getMediaType().equals(MediaType.MULTIPART_RELATED) && attachmentParts.size() == 0) {
+                    contentType.setMediaType(getMediaType());
+                    contentType.clearParameters();
                 }
-            }
-            contentType = new ContentType(contentTypeValue);
-            
-            //Use configures the baseType with multipart/related while no attachment exists or all the attachments are removed
-            if(contentType.getBaseType().equals(HTTPConstants.MEDIA_TYPE_MULTIPART_RELATED) && attachmentParts.size() == 0) {
-                contentType = new ContentType(getBaseType());
             }
            
             //If it is of multipart/related, initialize those required values in the content-type, including boundary etc.
-            if (contentType.getBaseType().equals(HTTPConstants.MEDIA_TYPE_MULTIPART_RELATED)) {
+            if (contentType.getMediaType().equals(MediaType.MULTIPART_RELATED)) {
                 
                 //Configure boundary
                 String boundaryParam = contentType.getParameter("boundary");
@@ -314,15 +307,15 @@ public class SOAPMessageImpl extends SOAPMessage {
                 }
                 
                 //Configure type                
-                contentType.setParameter("type", getBaseType());
+                contentType.setParameter("type", getMediaType().toString());
                 
                 //Configure charset
                 String soapPartContentTypeValue = getSingleHeaderValue(soapPart.getMimeHeader(HTTPConstants.HEADER_CONTENT_TYPE));
-                ContentType soapPartContentType = null;
+                ContentType.Builder soapPartContentType;
                 if (isEmptyString(soapPartContentTypeValue)) {
-                    soapPartContentType = new ContentType(soapPartContentTypeValue);
+                    soapPartContentType = new ContentType(soapPartContentTypeValue).toBuilder();
                 } else {
-                    soapPartContentType = new ContentType(getBaseType());
+                    soapPartContentType = ContentType.builder().setMediaType(getMediaType());
                 }                
                 setCharsetParameter(soapPartContentType);
             } else {
@@ -330,7 +323,7 @@ public class SOAPMessageImpl extends SOAPMessage {
                 setCharsetParameter(contentType);
             }
             
-            mimeHeaders.setHeader(HTTPConstants.HEADER_CONTENT_TYPE, contentType.toString());
+            mimeHeaders.setHeader(HTTPConstants.HEADER_CONTENT_TYPE, contentType.build().toString());
         } catch (ParseException e) {
             throw new SOAPException("Invalid Content Type Field in the Mime Message", e);
         }
@@ -377,11 +370,11 @@ public class SOAPMessageImpl extends SOAPMessage {
                 format.setIgnoreXMLDeclaration(true);
             }
             
-            SOAPEnvelope envelope = ((SOAPEnvelopeImpl) soapPart.getEnvelope()).getOMEnvelope();
+            SOAPEnvelope envelope = ((SOAPEnvelopeImpl) soapPart.getEnvelope()).getOMTarget();
             if (attachmentParts.isEmpty()) {
                 envelope.serialize(out, format);
             } else {
-                ContentType contentType = new ContentType(getSingleHeaderValue(HTTPConstants.HEADER_CONTENT_TYPE));
+                ContentType.Builder contentType = new ContentType(getSingleHeaderValue(HTTPConstants.HEADER_CONTENT_TYPE)).toBuilder();
                 String boundary = contentType.getParameter("boundary");
                 if(isEmptyString(boundary)) {
                     boundary = UIDGenerator.generateMimeBoundary();
@@ -400,10 +393,10 @@ public class SOAPMessageImpl extends SOAPMessage {
                 }
                 format.setRootContentId(rootContentId);
 
-                format.setSOAP11(((SOAPEnvelopeImpl) soapPart.getEnvelope()).getOMFactory() instanceof SOAP11Factory);
+                format.setSOAP11(((SOAPFactory)((SOAPEnvelopeImpl) soapPart.getEnvelope()).omTarget.getOMFactory()).getSOAPVersion() == SOAPVersion.SOAP11);
                 
                 //Double save the content-type in case anything is updated
-                mimeHeaders.setHeader(HTTPConstants.HEADER_CONTENT_TYPE, contentType.toString());
+                mimeHeaders.setHeader(HTTPConstants.HEADER_CONTENT_TYPE, contentType.build().toString());
 
                 OMMultipartWriter mpw = new OMMultipartWriter(out, format);
                 OutputStream rootPartOutputStream = mpw.writeRootPart();
@@ -611,9 +604,8 @@ public class SOAPMessageImpl extends SOAPMessage {
         }
     }
     
-    private String getBaseType() throws SOAPException {
-        boolean isSOAP12 = ((SOAPEnvelopeImpl) soapPart.getEnvelope()).getOMFactory() instanceof SOAP12Factory;
-        return isSOAP12 ? HTTPConstants.MEDIA_TYPE_APPLICATION_SOAP_XML : HTTPConstants.MEDIA_TYPE_TEXT_XML;
+    private MediaType getMediaType() throws SOAPException {
+        return ((SOAPFactory)((SOAPEnvelopeImpl) soapPart.getEnvelope()).omTarget.getOMFactory()).getSOAPVersion().getMediaType();
     }
     
     /**
@@ -623,7 +615,7 @@ public class SOAPMessageImpl extends SOAPMessage {
      * @param contentType
      * @throws SOAPException
      */
-    private void setCharsetParameter(ContentType contentType) throws SOAPException{
+    private void setCharsetParameter(ContentType.Builder contentType) throws SOAPException{
         String charset = (String)getProperty(CHARACTER_SET_ENCODING); 
         if (!isEmptyString(charset)) {
             contentType.setParameter("charset", charset);

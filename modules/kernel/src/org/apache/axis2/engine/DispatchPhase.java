@@ -41,8 +41,8 @@ import org.apache.axis2.transport.RequestResponseTransport;
 import org.apache.axis2.transport.TransportListener;
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.axis2.util.JavaUtils;
-import org.apache.axis2.wsdl.WSDLConstants.WSDL20_2004_Constants;
-import org.apache.axis2.wsdl.WSDLConstants.WSDL20_2006Constants;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import javax.xml.namespace.QName;
 import java.util.ArrayList;
@@ -50,6 +50,7 @@ import java.util.Iterator;
 import java.util.List;
 
 public class DispatchPhase extends Phase {
+    private static final Log log = LogFactory.getLog(DispatchPhase.class);
 
     public DispatchPhase() {
     }
@@ -160,8 +161,8 @@ public class DispatchPhase extends Phase {
         } else if (AddressingHelper.isReplyRedirected(msgContext) && AddressingHelper.isFaultRedirected(msgContext)) {
 
 
-            if (mepString.equals(WSDL20_2006Constants.MEP_URI_IN_OUT)
-                    || mepString.equals(WSDL20_2004_Constants.MEP_URI_IN_OUT)
+            if (mepString.equals(WSDL2Constants.MEP_URI_IN_OUT)
+                    || mepString.equals(WSDL2Constants.MEP_URI_IN_OUT)
                     || mepString.equals(WSDL2Constants.MEP_URI_IN_OUT)) { 
                 // OR, if 2 way operation but the response is intended to not use the response channel of a 2-way transport
                 // then we don't need to keep the transport waiting.
@@ -255,6 +256,10 @@ public class DispatchPhase extends Phase {
                 return;
             }
 
+            if (log.isDebugEnabled()) {
+                log.debug("Incoming transport: " + incomingTrs + "; allowed transports: " + trs);
+            }
+            
             for (int i = 0; i < trs.size(); i++) {
                 String tr = (String) trs.get(i);
                 if (incomingTrs != null && incomingTrs.equals(tr)) {
@@ -393,8 +398,8 @@ public class DispatchPhase extends Phase {
      */
     @SuppressWarnings("deprecation")
     boolean isOneway(String mepString) {
-        return (mepString.equals(WSDL20_2006Constants.MEP_URI_IN_ONLY)
-                || mepString.equals(WSDL20_2004_Constants.MEP_URI_IN_ONLY)
+        return (mepString.equals(WSDL2Constants.MEP_URI_IN_ONLY)
+                || mepString.equals(WSDL2Constants.MEP_URI_IN_ONLY)
                 || mepString.equals(WSDL2Constants.MEP_URI_IN_ONLY));
     }
 

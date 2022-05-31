@@ -28,12 +28,15 @@ import org.apache.axis2.util.PolicyUtil;
 import org.apache.axis2.wsdl.SOAPHeaderMessage;
 import org.apache.neethi.Policy;
 import org.apache.neethi.PolicyComponent;
-import org.apache.ws.commons.schema.*;
+import org.apache.ws.commons.schema.XmlSchema;
+import org.apache.ws.commons.schema.XmlSchemaElement;
+import org.apache.ws.commons.schema.XmlSchemaImport;
+import org.apache.ws.commons.schema.XmlSchemaInclude;
+import org.apache.ws.commons.schema.XmlSchemaObject;
 
 import javax.xml.namespace.QName;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.Iterator;
+import java.util.Collection;
 import java.util.List;
 
 
@@ -63,17 +66,17 @@ public class AxisMessage extends AxisDescription {
     private boolean wrapped = true;
 
     private volatile Policy effectivePolicy = null;
-    private volatile Date lastPolicyCalculatedTime = null;
+    private volatile OpaqueInstant lastPolicyCalculatedTime = null;
 
     public String getMessagePartName() {
-		return messagePartName;
-	}
+        return messagePartName;
+    }
 
-	public void setMessagePartName(String messagePartName) {
-		this.messagePartName = messagePartName;
-	}
+    public void setMessagePartName(String messagePartName) {
+        this.messagePartName = messagePartName;
+    }
 
-	public AxisMessage() {
+    public AxisMessage() {
         soapHeaders = new ArrayList();
         handlerChain = new ArrayList<Handler>();
         modulerefs = new ArrayList<String>();
@@ -144,23 +147,17 @@ public class AxisMessage extends AxisDescription {
             xmlSchemaElement = schema.getElementByName(this.elementQname);
             if (xmlSchemaElement == null) {
                 // try to find in an import or an include
-                XmlSchemaObjectCollection includes = schema.getIncludes();
-                if (includes != null) {
-                    Iterator includesIter = includes.getIterator();
-                    Object object;
-                    while (includesIter.hasNext()) {
-                        object = includesIter.next();
-                        if (object instanceof XmlSchemaImport) {
-                            XmlSchema schema1 = ((XmlSchemaImport) object).getSchema();
-                            xmlSchemaElement = getSchemaElement(schema1);
-                        }
-                        if (object instanceof XmlSchemaInclude) {
-                            XmlSchema schema1 = ((XmlSchemaInclude) object).getSchema();
-                            xmlSchemaElement = getSchemaElement(schema1);
-                        }
-                        if (xmlSchemaElement != null){
-                            break;
-                        }
+                for (XmlSchemaObject external : schema.getExternals()) {
+                    if (external instanceof XmlSchemaImport) {
+                        XmlSchema schema1 = ((XmlSchemaImport) external).getSchema();
+                        xmlSchemaElement = getSchemaElement(schema1);
+                    }
+                    if (external instanceof XmlSchemaInclude) {
+                        XmlSchema schema1 = ((XmlSchemaInclude) external).getSchema();
+                        xmlSchemaElement = getSchemaElement(schema1);
+                    }
+                    if (xmlSchemaElement != null) {
+                        break;
                     }
                 }
             }
@@ -243,72 +240,72 @@ public class AxisMessage extends AxisDescription {
             synchronized (this) {
                 if (lastPolicyCalculatedTime == null || isPolicyUpdated()) {
                     effectivePolicy = calculateEffectivePolicy();
-                    lastPolicyCalculatedTime = new Date();
+                    lastPolicyCalculatedTime = new OpaqueInstant();
                 }
             }
         }
         return effectivePolicy;
     }
 
-	public Policy calculateEffectivePolicy() {
-		PolicySubject policySubject;
-		ArrayList<PolicyComponent> policyList = new ArrayList<PolicyComponent>();
+    public Policy calculateEffectivePolicy() {
+        PolicySubject policySubject;
+        Collection<PolicyComponent> policyList = new ArrayList<PolicyComponent>();
 
-		// AxisMessage
-		policySubject = getPolicySubject();
-		policyList.addAll(policySubject.getAttachedPolicyComponents());
+        // AxisMessage
+        policySubject = getPolicySubject();
+        policyList.addAll(policySubject.getAttachedPolicyComponents());
 
-		// AxisOperation
-		AxisOperation axisOperation = getAxisOperation();
-		if (axisOperation != null) {
-			policyList.addAll(axisOperation.getPolicySubject()
-					.getAttachedPolicyComponents());
-		}
+        // AxisOperation
+        AxisOperation axisOperation = getAxisOperation();
+        if (axisOperation != null) {
+            policyList.addAll(axisOperation.getPolicySubject()
+                    .getAttachedPolicyComponents());
+        }
 
-		// AxisService
-		AxisService axisService = (axisOperation == null) ? null
-				: axisOperation.getAxisService();
-		if (axisService != null) {
-			policyList.addAll(axisService.getPolicySubject()
-					.getAttachedPolicyComponents());
-		}
+        // AxisService
+        AxisService axisService = (axisOperation == null) ? null
+                : axisOperation.getAxisService();
+        if (axisService != null) {
+            policyList.addAll(axisService.getPolicySubject()
+                    .getAttachedPolicyComponents());
+        }
 
-		// AxisConfiguration
-		AxisConfiguration axisConfiguration = (axisService == null) ? null
-				: axisService.getAxisConfiguration();
-		if (axisConfiguration != null) {
-			policyList.addAll(axisConfiguration.getPolicySubject()
-					.getAttachedPolicyComponents());
-		}
+        // AxisConfiguration
+        AxisConfiguration axisConfiguration = (axisService == null) ? null
+                : axisService.getAxisConfiguration();
+        if (axisConfiguration != null) {
+            policyList.addAll(axisConfiguration.getPolicySubject()
+                    .getAttachedPolicyComponents());
+        }
 
-		Policy result = PolicyUtil.getMergedPolicy(policyList, axisService);
-		return result;
-	}
+        Policy result = PolicyUtil.getMergedPolicy(policyList, axisService);
+        return result;
+    }
 
-	public boolean isPolicyUpdated() {
-		// AxisMessage
-		if (getPolicySubject().getLastUpdatedTime().after(
+    public boolean isPolicyUpdated() {
+        // AxisMessage
+        if (getPolicySubject().getLastUpdatedTime().after(
                 lastPolicyCalculatedTime)) {
-			return true;
-		}
-		// AxisOperation
-		AxisOperation axisOperation = (AxisOperation) parent;
-		if (axisOperation != null
-				&& axisOperation.getPolicySubject().getLastUpdatedTime().after(
+            return true;
+        }
+        // AxisOperation
+        AxisOperation axisOperation = (AxisOperation) parent;
+        if (axisOperation != null
+                && axisOperation.getPolicySubject().getLastUpdatedTime().after(
                 lastPolicyCalculatedTime)) {
-			return true;
-		}
-		// AxisService
-		AxisService axisService = (axisOperation == null) ? null
-				: axisOperation.getAxisService();
-		if (axisService != null
-				&& axisService.getPolicySubject().getLastUpdatedTime().after(
+            return true;
+        }
+        // AxisService
+        AxisService axisService = (axisOperation == null) ? null
+                : axisOperation.getAxisService();
+        if (axisService != null
+                && axisService.getPolicySubject().getLastUpdatedTime().after(
                 lastPolicyCalculatedTime)) {
-			return true;
-		}
-		// AxisConfiguration
-		AxisConfiguration axisConfiguration = (axisService == null) ? null
-				: axisService.getAxisConfiguration();
+            return true;
+        }
+        // AxisConfiguration
+        AxisConfiguration axisConfiguration = (axisService == null) ? null
+                : axisService.getAxisConfiguration();
         return axisConfiguration != null
                && axisConfiguration.getPolicySubject().getLastUpdatedTime()
                 .after(lastPolicyCalculatedTime);

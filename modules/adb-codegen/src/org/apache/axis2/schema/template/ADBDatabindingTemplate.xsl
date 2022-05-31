@@ -135,7 +135,7 @@
                                 </xsl:when>
                                 <xsl:otherwise>
                                     <!-- Assumption - the parameter is always an ADB element-->
-                                        private  org.apache.axiom.soap.SOAPEnvelope toEnvelope(org.apache.axiom.soap.SOAPFactory factory, <xsl:value-of select="$inputElementType"/> param, boolean optimizeContent, javax.xml.namespace.QName methodQName)
+                                        private  org.apache.axiom.soap.SOAPEnvelope toEnvelope(org.apache.axiom.soap.SOAPFactory factory, <xsl:value-of select="$inputElementType"/> param, boolean optimizeContent, javax.xml.namespace.QName elementQName)
                                         throws org.apache.axis2.AxisFault{
 
                                              <xsl:choose>
@@ -253,7 +253,7 @@
                   <xsl:variable name="outElementType" select="../../param[@type!='' and @direction='out' and @opname=$opname]/@type"></xsl:variable>
                     <!-- Assumption - The ADBBean here is always an element based bean -->
                     <xsl:if test="generate-id($outElement) = generate-id(key('paramsOut', $outElementType)[1])">
-                    private  org.apache.axiom.soap.SOAPEnvelope toEnvelope(org.apache.axiom.soap.SOAPFactory factory, <xsl:value-of select="../../param[@type!='' and @direction='out' and @opname=$opname]/@type"/> param, boolean optimizeContent, javax.xml.namespace.QName methodQName)
+                    private  org.apache.axiom.soap.SOAPEnvelope toEnvelope(org.apache.axiom.soap.SOAPFactory factory, <xsl:value-of select="../../param[@type!='' and @direction='out' and @opname=$opname]/@type"/> param, boolean optimizeContent, javax.xml.namespace.QName elementQName)
                         throws org.apache.axis2.AxisFault{
                       try{
                           org.apache.axiom.soap.SOAPEnvelope emptyEnvelope = factory.getDefaultEnvelope();
@@ -401,21 +401,28 @@
 
         try {
         <xsl:for-each select="param[not(@primitive) and @type!='']">
+            <xsl:sort select="@type" order="ascending" data-type="text"/>
+            <xsl:if test="not(@type=preceding-sibling::param/@type)">
                 if (<xsl:value-of select="@type"/>.class.equals(type)){
                 <xsl:choose>
-                    <xsl:when test="$helpermode">
-                           return <xsl:value-of select="@type"/>Helper.INSTANCE.parse(param.getXMLStreamReaderWithoutCaching());
-                    </xsl:when>
                     <xsl:when test="@type = 'org.apache.axiom.om.OMElement'">
-                           return param;
+                        return param;
                     </xsl:when>
                     <xsl:otherwise>
-                           return <xsl:value-of select="@type"/>.Factory.parse(param.getXMLStreamReaderWithoutCaching());
+                        javax.xml.stream.XMLStreamReader reader = param.getXMLStreamReaderWithoutCaching();
+                        java.lang.Object result =
+                        <xsl:choose>
+                            <xsl:when test="$helpermode"><xsl:value-of select="@type"/>Helper.INSTANCE.parse(reader);</xsl:when>
+                            <xsl:otherwise><xsl:value-of select="@type"/>.Factory.parse(reader);</xsl:otherwise>
+                        </xsl:choose>
+                        reader.close();
+                        return result;
                     </xsl:otherwise>
                 </xsl:choose>
 
                 }
-           </xsl:for-each>
+            </xsl:if>
+        </xsl:for-each>
         } catch (java.lang.Exception e) {
         throw org.apache.axis2.AxisFault.makeFault(e);
         }

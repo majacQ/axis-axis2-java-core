@@ -19,30 +19,29 @@
 
 package org.apache.axis2.transport.http;
 
-import org.apache.commons.httpclient.Header;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class CommonsTransportHeaders implements Map {
-    private Header[] headers;
+import org.apache.axiom.mime.Header;
 
-    HashMap headerMap = null;
-
+public final class CommonsTransportHeaders implements Map<String,String> {  
+    private final Header[] headers;
+    private Map<String,String> headerMap;
+    
     public CommonsTransportHeaders(Header[] headers) {
         this.headers = headers;
     }
 
     private void init() {
-        headerMap = new HashMap();
-
+        headerMap = new HashMap<String,String>();
         for (int i = 0; i < headers.length; i++) {
             headerMap.put(headers[i].getName(), headers[i].getValue());
         }
     }
-
+    
     public int size() {
         if (headerMap == null) {
             init();
@@ -77,49 +76,49 @@ public class CommonsTransportHeaders implements Map {
         return headerMap.containsValue(value);
     }
 
-    public Collection values() {
+    public Collection<String> values() {
         if (headerMap == null) {
             init();
         }
         return headerMap.values();
     }
 
-    public void putAll(Map t) {
+    public void putAll(Map<? extends String,? extends String> t) {
         if (headerMap == null) {
             init();
         }
         headerMap.putAll(t);
     }
 
-    public Set entrySet() {
+    public Set<Map.Entry<String,String>> entrySet() {
         if (headerMap == null) {
             init();
         }
         return headerMap.entrySet();
     }
 
-    public Set keySet() {
+    public Set<String> keySet() {
         if (headerMap == null) {
             init();
         }
         return headerMap.keySet();
     }
 
-    public Object get(Object key) {
+    public String get(Object key) {
         if (headerMap == null) {
             init();
         }
         return headerMap.get(key);
     }
 
-    public Object remove(Object key) {
+    public String remove(Object key) {
         if (headerMap == null) {
             init();
         }
         return headerMap.remove(key);
     }
 
-    public Object put(Object key, Object value) {
+    public String put(String key, String value) {
         if (headerMap == null) {
             init();
         }

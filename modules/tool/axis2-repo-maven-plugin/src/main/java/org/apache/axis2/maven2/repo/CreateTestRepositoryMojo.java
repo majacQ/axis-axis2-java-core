@@ -31,10 +31,18 @@ import org.apache.maven.plugin.MojoFailureException;
  * is skipped if the <code>maven.test.skip</code> property is set to <code>true</code>.
  * 
  * @goal create-test-repository
- * @phase generate-test-resources
+ * @phase process-test-classes
  * @requiresDependencyResolution test
+ * @threadSafe
  */
 public class CreateTestRepositoryMojo extends AbstractCreateRepositoryMojo {
+    /**
+     * Input directory with additional files to be copied to the repository.
+     * 
+     * @parameter default-value="src/test/repository"
+     */
+    private File inputDirectory;
+    
     /**
      * The output directory where the repository will be created.
      * 
@@ -43,10 +51,22 @@ public class CreateTestRepositoryMojo extends AbstractCreateRepositoryMojo {
     private File outputDirectory;
     
     /**
-     * @parameter expression="${maven.test.skip}"
+     * @parameter property="maven.test.skip"
      * @readonly
      */
     private boolean skip;
+    
+    /**
+     * @parameter property="project.build.outputDirectory"
+     * @readonly
+     */
+    private File buildOutputDirectory;
+    
+    /**
+     * @parameter property="project.build.testOutputDirectory"
+     * @readonly
+     */
+    private File buildTestOutputDirectory;
     
     @Override
     protected String getScope() {
@@ -54,8 +74,18 @@ public class CreateTestRepositoryMojo extends AbstractCreateRepositoryMojo {
     }
 
     @Override
+    protected File getInputDirectory() {
+        return inputDirectory;
+    }
+
+    @Override
     protected File getOutputDirectory() {
         return outputDirectory;
+    }
+
+    @Override
+    protected File[] getClassDirectories() {
+        return new File[] { buildOutputDirectory, buildTestOutputDirectory };
     }
 
     @Override

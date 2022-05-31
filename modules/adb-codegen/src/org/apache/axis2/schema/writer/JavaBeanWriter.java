@@ -55,6 +55,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +106,8 @@ public class JavaBeanWriter implements BeanWriter {
     private boolean isHelperMode = false;
 
     private boolean isSuppressPrefixesMode = false;
+
+    private boolean isIgnoreUnexpected = false;
 
     /**
      * package for the mapping class
@@ -169,6 +172,7 @@ public class JavaBeanWriter implements BeanWriter {
             packageName = options.getPackageName();
             writeClasses = options.isWriteOutput();
             isUseWrapperClasses = options.isUseWrapperClasses();
+            isIgnoreUnexpected = options.isIgnoreUnexpected();
 
             if (!writeClasses) {
                 wrapClasses = false;
@@ -551,6 +555,10 @@ public class JavaBeanWriter implements BeanWriter {
             XSLTUtils.addAttribute(model, "usewrapperclasses", "yes", rootElt);
         }
 
+        if (isIgnoreUnexpected) {
+            XSLTUtils.addAttribute(model, "ignoreunexpected", "yes", rootElt);
+        }
+
         if (metainf.isExtension()) {
             XSLTUtils.addAttribute(model, "extension", metainf
                     .getExtensionClassName(), rootElt);
@@ -720,10 +728,11 @@ public class JavaBeanWriter implements BeanWriter {
         } else {
             qName = metainf.getQNameArray();
         }
-
+        
         for (int i = 0; i < qName.length; i++) {
             qNames.add(qName[i]);
         }
+        
         //adding missing QNames to the end, including elements & attributes.
         // for the simple types we have already add the parent elements
         // it is almost consider as an extension
@@ -731,12 +740,27 @@ public class JavaBeanWriter implements BeanWriter {
             addMissingQNames(metainf, qNames, missingQNames);
         }
         
+    	List<BeanWriterMetaInfoHolder> parents=new ArrayList<BeanWriterMetaInfoHolder>();
+    	BeanWriterMetaInfoHolder immediateParent=metainf.getParent();
+    	while(immediateParent != null){
+    		parents.add(immediateParent);
+    		immediateParent=immediateParent.getParent();
+    	}
+        
         for (QName name : qNames) {
             Element property = XSLTUtils.addChildElement(model, "property", rootElt);
 
             String xmlName = name.getLocalPart();
+            
+			String xmlNameNew=identifyUniqueNameForQName(parents,xmlName, metainf, name,name);
+			while(!xmlName.equalsIgnoreCase(xmlNameNew)){
+				xmlName=xmlNameNew;
+				xmlNameNew=identifyUniqueNameForQName(parents,xmlNameNew, metainf, name,new QName(xmlNameNew));
+			}
+            
             XSLTUtils.addAttribute(model, "name", xmlName, property);
             XSLTUtils.addAttribute(model, "nsuri", name.getNamespaceURI(), property);
+            
 
             String javaName;
             if (metainf.isJavaNameMappingAvailable(xmlName)) {
@@ -796,7 +820,8 @@ public class JavaBeanWriter implements BeanWriter {
                             metainf.getDefaultValueForQName(name), property);
                 }
             }
-
+            
+            
             //in the case the original element is an array but the derived one is not.
             if (parentMetaInf != null && metainf.isRestriction() && !missingQNames.contains(name) &&
                     (parentMetaInf.getArrayStatusForQName(name) && !metainf.getArrayStatusForQName(name))) {
@@ -862,7 +887,6 @@ public class JavaBeanWriter implements BeanWriter {
                         groupTypeMap,
                         javaClassNameForElement);
             }
-
         }  // end of foo
     }
 
@@ -1008,6 +1032,20 @@ public class JavaBeanWriter implements BeanWriter {
 
         if (metainf.isRestrictionBaseType(name) && metainf.getPatternFacet() != null) {
             XSLTUtils.addAttribute(model, "patternFacet", metainf.getPatternFacet(), property);
+            /*
+              if restriction use either maxLenFacet or minLenFacet then other xxxLenFacet get following default value
+              for minLenFacet = -1 as default
+               for maxLenFacet = 9223372036854775807 (Long.MAX_VALUE) as default
+             */
+            if(metainf.getMaxLengthFacet() != -1){
+                if(metainf.getMinLengthFacet() == -1){
+                    XSLTUtils.addAttribute(model, "minLenFacet", "-1", property);
+                }
+            }else{
+                if(metainf.getMinLengthFacet()!=-1){
+                    XSLTUtils.addAttribute(model, "maxLenFacet", Long.MAX_VALUE + "", property);
+                }
+            }
         }
     }
 
@@ -1451,6 +1489,47 @@ public class JavaBeanWriter implements BeanWriter {
         }
 
 
+    }
+    
+    /**
+     * This method is used to generate a unique name for a given QName and a metainf.
+     * First we check the parents whether they have the given QName, If yes, then we check the java type for QName.
+     * If they are similar, no issue. If they are different, java name has to be changed. 
+     * After changing also, we need to check whether the changed name contains in the parentinfs.
+     * @param parents
+     * @param xmlName
+     * @param metainf
+     * @param original
+     * @param modified
+     * @return
+     */
+    private String identifyUniqueNameForQName(List<BeanWriterMetaInfoHolder> parents, String xmlName,BeanWriterMetaInfoHolder metainf,QName original,QName modified){
+
+    	int count=0;
+		for (BeanWriterMetaInfoHolder beanWriterMetaInfoHolder : parents) {
+			QName[] pQNmame = null;
+			if (beanWriterMetaInfoHolder.isOrdered()) {
+				pQNmame = beanWriterMetaInfoHolder.getOrderedQNameArray();
+			} else {
+				pQNmame = beanWriterMetaInfoHolder.getQNameArray();
+			}
+
+			List<QName> pQNameList = null;
+			if (pQNmame != null) {
+				pQNameList = Arrays.asList(pQNmame);
+			}
+			
+			if (pQNameList != null
+					&& pQNameList.contains(modified)
+					&& metainf.getClassNameForQName(original) != null
+					&& !metainf.getClassNameForQName(original).equalsIgnoreCase(
+							beanWriterMetaInfoHolder.getClassNameForQName(modified))) {
+				xmlName += count;
+				break;
+			}
+			count++;
+		}
+    	return xmlName;
     }
 
 }

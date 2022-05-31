@@ -159,10 +159,6 @@ public interface DeploymentConstants {
     char SEPARATOR_DOT = '.';
     char SEPARATOR_COLON = ':';
 
-    String POLICY_NS_URI = Constants.URI_POLICY;
-    String TAG_POLICY = "Policy";
-    String TAG_POLICY_REF = "PolicyReference";
-    
     String TAG_POLICY_ATTACHMENT = "PolicyAttachment";
     String TAG_APPLIES_TO = "AppliesTo";
 }

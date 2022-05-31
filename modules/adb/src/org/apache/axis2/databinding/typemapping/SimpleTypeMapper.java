@@ -31,7 +31,9 @@ import org.apache.axis2.description.AxisService;
 import org.w3c.dom.Document;
 
 import javax.activation.DataHandler;
+import javax.xml.datatype.XMLGregorianCalendar;
 import javax.xml.namespace.QName;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.net.URI;
@@ -50,6 +52,7 @@ public class SimpleTypeMapper {
     private static final String W_FLOAT = "java.lang.Float";
     private static final String W_CALENDAR = "java.util.Calendar";
     private static final String W_DATE = "java.util.Date";
+    private static final String W_SQL_DATE = "java.sql.Date";
     private static final String W_URI = URI.class.getName();
     private static final String INT = "int";
     private static final String BOOLEAN = "boolean";
@@ -73,11 +76,12 @@ public class SimpleTypeMapper {
     private static final String TIME = "org.apache.axis2.databinding.types.Time";
     private static final String YEAR = "org.apache.axis2.databinding.types.Year";
     private static final String YEAR_MONTH = "org.apache.axis2.databinding.types.YearMonth";
+    
+    private static final String SQL_DATE_FORMAT = "yyyy-MM-dd";
 
-    public static Object getSimpleTypeObject(Class parameter, OMElement value) {
+    public static Object getSimpleTypeObject(Class parameter, String text) {
         String name = parameter.getName();
-        String text = value.getText();
-        
+
         if(name.equals(STRING)) {
             return text;
         } else  if (text == null || text.length() == 0) {
@@ -118,7 +122,12 @@ public class SimpleTypeMapper {
             return makeCalendar(text);
         } else if (name.equals(W_DATE)) {
             return makeDate(text);
-        }/*
+        } else if(name.equals(W_SQL_DATE)) {
+            java.util.Date utilDate = (java.util.Date)makeDate(text);
+            DateFormat sqlDateFormatter = new SimpleDateFormat(SQL_DATE_FORMAT);
+            return java.sql.Date.valueOf(sqlDateFormatter.format(utilDate));            
+        }
+        /*
          * return the correpsonding object for adding data type
          */
         else if(name.equals(BIG_DECIMAL)) {
@@ -156,6 +165,10 @@ public class SimpleTypeMapper {
         } else {
             return null;
         }
+    }
+
+    public static Object getSimpleTypeObject(Class parameter, OMElement value) {
+        return getSimpleTypeObject(parameter, value.getText());
     }
 
     public static ArrayList getArrayList(OMElement element, String localName) {
@@ -225,7 +238,7 @@ public class SimpleTypeMapper {
     		return false;
     	}
         String objClassName = obj.getClass().getName();
-        return obj instanceof Calendar || obj instanceof Date || isSimpleType(objClassName);
+        return obj instanceof Calendar || obj instanceof Date || obj instanceof XMLGregorianCalendar || isSimpleType(objClassName);
     }
 
     public static boolean isSimpleType(Class obj) {
@@ -282,6 +295,8 @@ public class SimpleTypeMapper {
         } else if (objClassName.equals(W_CALENDAR)) {
             return true;
         } else if (objClassName.equals(W_DATE)) {
+            return true;
+        } else if (objClassName.equals(W_SQL_DATE)) {
             return true;
         } else if (objClassName.equals(W_URI)) {
             return true;
@@ -418,4 +433,13 @@ public class SimpleTypeMapper {
 		}
 	}
 
+    /*check weather passed parameter class is a java.lang.Enum
+    *
+    * @param classType the class type
+    * @return true , if it is an Enum
+    * */
+
+    public static boolean isEnum(Class classType) {
+        return java.lang.Enum.class.isAssignableFrom(classType);
+    }
 }

@@ -20,18 +20,21 @@
 
 package org.apache.axis2.transport.http;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.description.AxisOperation;
 import org.apache.axis2.description.AxisService;
 import org.apache.axis2.engine.AxisConfiguration;
 
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Map;
 
 /**
  * Class HTTPTransportReceiver
@@ -97,8 +100,12 @@ public class HTTPTransportReceiver {
 
         if ((services != null) && !services.isEmpty()) {
             status = true;
-
-            Collection serviceCollection = services.values();
+            Collection serviceCollection = new ArrayList();
+            // sort services by alphabetical order to show in services page
+            Set<String> allServices = new TreeSet<String>(services.keySet());
+            for(String serviceName : allServices) {
+                serviceCollection.add(services.get(serviceName));
+            }
 
             temp += "<h2>" + "Deployed services" + "</h2>";
 
@@ -131,11 +138,9 @@ public class HTTPTransportReceiver {
             temp += "<hr><h2><font color=\"blue\">Faulty Services</font></h2>";
             status = true;
 
-            Enumeration faultyservices = erroneousServices.keys();
-
-            while (faultyservices.hasMoreElements()) {
-                String faultyserviceName = (String) faultyservices.nextElement();
-
+            // sort faluty services to alphabetical order
+            Set<String> allFaultServices = new TreeSet<String>(erroneousServices.keySet());
+            for(String faultyserviceName : allFaultServices) {
                 temp += "<h3><font color=\"blue\">" + faultyserviceName + "</font></h3>";
             }
         }

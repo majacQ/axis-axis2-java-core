@@ -22,7 +22,6 @@ package org.apache.axis2.databinding.utils;
 
 import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
-import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
@@ -49,15 +48,17 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.activation.DataHandler;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.XMLGregorianCalendar;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamReader;
 
 import org.apache.axiom.om.*;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
-import org.apache.axiom.om.impl.dom.DOOMAbstractFactory;
-import org.apache.axiom.om.impl.dom.DocumentImpl;
 import org.apache.axiom.om.util.Base64;
 import org.apache.axis2.AxisFault;
+import org.apache.axis2.classloader.BeanInfoCache;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.databinding.typemapping.SimpleTypeMapper;
 import org.apache.axis2.databinding.utils.reader.ADBXMLStreamReaderImpl;
@@ -79,6 +80,7 @@ import org.w3c.dom.traversal.TreeWalker;
 
 
 public class BeanUtil {
+   
     private static int nsCount = 1;
 
     /**
@@ -120,19 +122,7 @@ public class BeanUtil {
 
 
     private static BeanInfo getBeanInfo(Class beanClass, Class beanSuperclass) throws IntrospectionException {
-        BeanInfo beanInfo; 
-        try {
-            if (beanSuperclass != null)
-            	beanInfo = Introspector.getBeanInfo(beanClass, beanSuperclass);
-            else
-                beanInfo = Introspector.getBeanInfo(beanClass);
-        }
-        catch (IntrospectionException e) {
-            throw e;
-        }
-
-         
-        return beanInfo;
+        return BeanInfoCache.getCachedBeanInfo(beanClass, beanSuperclass);
     }
 
     private static BeanInfo getBeanInfo(Class beanClass) throws IntrospectionException {
@@ -182,12 +172,12 @@ public class BeanUtil {
             PropertyDescriptor[] properties = beanInfo.getPropertyDescriptors();
             for (PropertyDescriptor property : properties) {
                 String propertyName = property.getName();
+                Class<?> ptype = property.getPropertyType();
                 if (propertyName.equals("class") ||
-                    beanExcludeInfo != null && beanExcludeInfo.isExcludedProperty(propertyName)) {
+                    beanExcludeInfo != null && beanExcludeInfo.isExcludedProperty(propertyName) || ptype == null) {
                     continue;
                 }
 
-                Class<?> ptype = property.getPropertyType();
                 Method readMethod = property.getReadMethod();
                 if (readMethod == null) {
                     Class propertyType = property.getPropertyType();
@@ -367,7 +357,12 @@ public class BeanUtil {
 					addTypeQname(elemntNameSpace, propertyQnameValueList,
 							property, beanName, processingDocLitBare);
 					propertyQnameValueList.add(map);
-				} else {
+				} else if (SimpleTypeMapper.isEnum(ptype)){
+                    addTypeQname(elemntNameSpace, propertyQnameValueList, property,
+                                 beanName, processingDocLitBare);
+                    propertyQnameValueList.add(
+                            value == null ? null : SimpleTypeMapper.getStringValue(value.toString()));
+                }else {
                     addTypeQname(elemntNameSpace, propertyQnameValueList, property,
                                  beanName, processingDocLitBare);
 					if (Object.class.equals(ptype)) {
@@ -376,18 +371,25 @@ public class BeanUtil {
 						QName qNamefortheType = (QName) typeTable
 								.getComplexSchemaMap().get(
 										getClassName(beanClass));
-						OMFactory fac = OMAbstractFactory.getOMFactory();						
-						QName elementName = new QName(elemntNameSpace
-								.getNamespaceURI(), property.getName(),
-								qNamefortheType.getPrefix());
-						OMElement element;
+						OMFactory fac = OMAbstractFactory.getOMFactory();
+                        QName elementName;
+                        OMElement element;
+                        if (elemntNameSpace != null) {
+                            elementName = new QName(
+                                    elemntNameSpace.getNamespaceURI(),
+                                    property.getName(),
+                                    qNamefortheType.getPrefix());
+                        } else {
+                            elementName = new QName(property.getName());
+                        }					
+						
 						if(SimpleTypeMapper.isSimpleType(value)){
-							element = fac.createOMElement(elementName);					
+							element = fac.createOMElement(elementName);
 							element.addChild(fac.createOMText(SimpleTypeMapper
-									.getStringValue(value)));	            		
-		            	}else{		            		 
+									.getStringValue(value)));            
+		            	}else{    
 		            		 XMLStreamReader xr = BeanUtil.getPullParser(value,
-		            				 elementName, typeTable, true, false);
+		            				 elementName, typeTable, qualified, false);
 		                     OMXMLParserWrapper stAXOMBuilder =
 		                             OMXMLBuilderFactory.createStAXOMBuilder(
 		                                     OMAbstractFactory.getOMFactory(), new StreamWrapper(xr));
@@ -461,8 +463,11 @@ public class BeanUtil {
             // to support polymorphism in POJO approach.
             // Retrieve the type name of the instance from the 'type' attribute
             // and retrieve the class.
-            
-            String instanceTypeName = beanElement.getAttributeValue(new QName(Constants.XSI_NAMESPACE, "type"));
+            String instanceTypeName = null;
+            if (beanClass != null && !beanClass.isArray()) {
+                instanceTypeName = beanElement.getAttributeValue(new QName(
+                        Constants.XSI_NAMESPACE, "type"));
+            }
             boolean hexBin = false;
             if (instanceTypeName != null) {
                 MessageContext messageContext = MessageContext.getCurrentMessageContext();
@@ -480,7 +485,7 @@ public class BeanUtil {
                         String className = typeTable.getClassNameForQName(typeQName);
                         if (className != null) {
                             try {
-                                beanClass = Loader.loadClass(beanClass.getClassLoader(), className);
+                                beanClass = Loader.loadClass(axisService.getClassLoader(), className);
                             } catch (ClassNotFoundException ce) {
                                 throw AxisFault.makeFault(ce);
                             }
@@ -536,6 +541,11 @@ public class BeanUtil {
                 }
             }else if(SimpleTypeMapper.isDomDocument(beanClass)){                  	
                 return convertOMtoDOM(beanElement);
+                
+            } else if (XMLGregorianCalendar.class.getName().equals(
+                    beanClass.getName())) {
+                return getXMLGregorianCalendar(beanElement);
+
             } else {
                 if (SimpleTypeMapper.isSimpleType(beanClass)) {
                     return getSimpleTypeObjectChecked(beanClass, beanElement);
@@ -625,6 +635,8 @@ public class BeanUtil {
                                 	 partObj = processGenericsMapElement(parameterArgTypes
                                      		 , (OMElement) parts.getParent(), null, parts.getChildren(), objectSupplier, beanClass);                                	
                                 }
+                            }else if (SimpleTypeMapper.isEnum(parameters)) {
+                                partObj =processEnumObject(parameters , parts);
                             } else {
                                 partObj = deserialize(parameters, parts, objectSupplier, null);
                             }
@@ -645,6 +657,8 @@ public class BeanUtil {
             throw new AxisFault("InvocationTargetException : " + e);
         } catch (IntrospectionException e) {
             throw new AxisFault("IntrospectionException : " + e);
+        } catch (DatatypeConfigurationException e) {
+            throw new AxisFault("DatatypeConfigurationException : " + e);            
         }
 
 
@@ -913,7 +927,7 @@ public class BeanUtil {
                                          helper, true, objectSupplier, genericType);
                 valueList.add(o);
             }
-            if (valueList.get(0) == null) {
+            if (valueList.size() == 1 && valueList.get(0) == null) {
                 retObjs[count] = null;
             } else {
                 retObjs[count] = ConverterUtil.convertToArray(arrayClassType,
@@ -944,7 +958,10 @@ public class BeanUtil {
                      return toReturn[0];
                  }        		
         	}        	
-        } else {
+        } else if (SimpleTypeMapper.isEnum(classType)) {
+            /* handling enum types */
+            retObjs[count] = processEnumObject(classType, omElement);
+        } else{
             //handling refs
             retObjs[count] = processObject(omElement, classType, helper, false, objectSupplier, genericType);
             
@@ -1065,11 +1082,36 @@ public class BeanUtil {
                   }
                  
                 	
-                } else {
+                }else if(SimpleTypeMapper.isEnum(classType)){
+                    return processEnumObject(classType, omElement);
+                }else {
                     return BeanUtil.deserialize(classType, omElement, objectSupplier, null);
                 }
             }
         }
+    }
+
+    /*This method check is service method required enum type instance as method parameter
+    * if so return required enum object
+    *
+    * @param classType method required instance type
+    * @param omElement OMElement
+    * @return an Enum object
+    * */
+    public static Object processEnumObject(Class classType , OMElement omElement)throws AxisFault{
+          /*
+            *reason to add this block is check is soap sending a string but service require Enum
+            * then this convert string to relevant enum object and add to retObjs[] as object
+            * */
+          String paraArgString = omElement.getText();
+         Object enumIbj;
+        if (paraArgString == null || paraArgString.length() == 0) {
+            enumIbj = null;
+        }else{
+            enumIbj = Enum.valueOf(classType , paraArgString);
+        }
+        return enumIbj;
+
     }
 
 
@@ -1188,6 +1230,9 @@ public class BeanUtil {
                         OMText text = fac.createOMText(arg, true);
                         wrappingElement.addChild(text);
                         objects.add(wrappingElement);
+                    }else if (SimpleTypeMapper.isEnum(arg.getClass())) {
+                        // in here i can return enum instances but for now i return it as a simple string
+                        objects.add(arg.toString());
                     } else {
                         objects.add(arg);
                     }
@@ -1260,8 +1305,8 @@ public class BeanUtil {
 	 *
 	 *
 	 * @param fac the SOAPFactory instance.
-	 * @param child the child OMElement to add attributes.
-	 * @param method the java reflection method
+	 * @param element the child OMElement to add attributes.
+	 * @param resObject the java reflection method
 	 * @param resObject the res object
 	 * @param typeTable the type table of particular Axis2 service
 	 */
@@ -1278,7 +1323,7 @@ public class BeanUtil {
 		element.declareNamespace(xsiNS);
 		element.declareNamespace(xsdNS);
 		QName xsdType = typeTable.getSchemaTypeName(resObject.getClass()
-				.getName());		
+				.getName());	
 		String attrValue = xsdType.getPrefix() + ":" + xsdType.getLocalPart();
 		element.addAttribute(Constants.XSI_TYPE_ATTRIBUTE, attrValue, xsiNS);
 	}
@@ -1290,9 +1335,10 @@ public class BeanUtil {
 	 * @return the DOOM document
 	 */
 	public static OMDocument convertOMtoDOM(OMContainer omElement) {
-		// use AXIOM DOOMAbstractFactory to get org.w3c.dom.Document
-		OMFactory doomFactory = DOOMAbstractFactory.getOMFactory();
-		StAXOMBuilder doomBuilder = new StAXOMBuilder(doomFactory,
+		// use an Axiom meta factory with feature "dom" to get org.w3c.dom.Document
+		OMFactory doomFactory = OMAbstractFactory.getMetaFactory(
+		        OMAbstractFactory.FEATURE_DOM).getOMFactory();
+		OMXMLParserWrapper doomBuilder = OMXMLBuilderFactory.createStAXOMBuilder(doomFactory,
 				omElement.getXMLStreamReader());
 		OMDocument domElement = doomBuilder.getDocument();
 		return domElement;
@@ -1307,7 +1353,7 @@ public class BeanUtil {
 	 */
 	public static OMElement convertDOMtoOM(OMFactory fac, Object document) {
 	    
-	    if(DocumentImpl.class.getName().equals(document.getClass().getName())) {
+	    if (document instanceof OMDocument) {
 		return ((OMDocument)document).getOMDocumentElement();
 		
 	    } else {
@@ -1521,7 +1567,7 @@ public class BeanUtil {
 				}			
 
 				
-				if(Iterator.class.isAssignableFrom(vValue.getClass())){
+				if(vValue != null && Iterator.class.isAssignableFrom(vValue.getClass())){
 					Iterator valItr = (Iterator) vValue;
 					while (valItr.hasNext()) {
 						properties.add(valueName);
@@ -1584,8 +1630,8 @@ public class BeanUtil {
 						(ParameterizedType) paraType,
 						helper, objectSupplier);
 			} else {
-				// TODO - support for custom ParameterizedTypes
-				return null;
+                throw new AxisFault("Map parameter does not support for "
+                        + ((ParameterizedType) paraType).getRawType());
 			}
 
 		} else {
@@ -1653,6 +1699,9 @@ public class BeanUtil {
 			String elementName, Object value, Type valueType,
 			TypeTable typeTable, OMNamespace ns, boolean elementFormDefault) {
          //TODO - key/value can be a Collection, Array , Dom document ,OMElement etc
+	    if(value == null) {
+	        return null;
+	    }
 		if (SimpleTypeMapper.isMap(value.getClass())) {
 			List<OMElement> childList = getMapElement(fac, valueType,
 					(Map) value, typeTable, elementFormDefault);
@@ -1683,13 +1732,16 @@ public class BeanUtil {
 					elementName, null, elementQName, typeTable,
 					elementFormDefault).getChildren();
 			
+		} else if(SimpleTypeMapper.isDomDocument((Class)valueType)) {
+		    return convertDOMtoOM(fac, value);
+		    
 		} else if (SimpleTypeMapper.isObjectType((Class) valueType)) {
 			OMElement omValue;
 			omValue = fac.createOMElement(elementName, ns);
 			if (SimpleTypeMapper.isSimpleType(value)) {
 				omValue.addChild(fac.createOMText(SimpleTypeMapper
 						.getStringValue(value)));
-			} else {
+            } else {
 			    QName name;
 			    if(elementFormDefault) {
 			        name = new QName(ns.getNamespaceURI(), elementName,
@@ -1707,7 +1759,14 @@ public class BeanUtil {
 			}
 			addInstanceTypeAttribute(fac, omValue, value, typeTable);
 			return omValue;
-		}
+			
+		} else if (SimpleTypeMapper.isSimpleType(value)) {
+            OMElement omValue;
+            omValue = fac.createOMElement(elementName, ns);
+            omValue.addChild(fac.createOMText(SimpleTypeMapper
+                    .getStringValue(value)));
+            return omValue;            
+        } 
 		return value;
 	}
 	
@@ -1959,5 +2018,12 @@ public class BeanUtil {
 	    }
 	}
 	
+    private static XMLGregorianCalendar getXMLGregorianCalendar(
+            OMElement beanElement) throws DatatypeConfigurationException {
+        String greCal = beanElement.getText();
+        XMLGregorianCalendar xmlCal = DatatypeFactory.newInstance()
+                .newXMLGregorianCalendar(greCal);
+        return xmlCal;
+    }	
 
 }

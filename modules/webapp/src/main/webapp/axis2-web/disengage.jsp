@@ -19,4 +19,4 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <jsp:include page="include/adminheader.jsp"/>
 <%=request.getSession().getAttribute("status")%>
-<jsp:include page="include/adminfooter.inc" />
+<jsp:include page="include/adminfooter.jsp"/>

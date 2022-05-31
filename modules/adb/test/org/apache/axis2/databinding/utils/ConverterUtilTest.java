@@ -29,6 +29,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
+import javax.activation.DataHandler;
+import javax.activation.DataSource;
+
+import org.apache.axiom.attachments.ByteArrayDataSource;
+import org.apache.axiom.om.util.Base64;
+
 public class ConverterUtilTest extends TestCase {
 
     /** Test conversion of Big Integer */
@@ -168,5 +174,52 @@ public class ConverterUtilTest extends TestCase {
         TestCase.assertTrue(ConverterUtil.convertToString(c).endsWith("+09:00"));
         
     }
+    
+    public void testconvertToDateXML() {
 
+        Date date = null;
+        String dateStr = null;
+
+        dateStr = "2007-02-15";
+        date = ConverterUtil.convertXmlToDate(dateStr);
+        assertNotNull(date);
+
+        dateStr = "2007-02-15Z";
+        date = ConverterUtil.convertXmlToDate(dateStr);
+        assertNotNull(date);
+
+        dateStr = "2007-02-15+05:30";
+        date = ConverterUtil.convertXmlToDate(dateStr);
+        assertNotNull(date);
+
+        dateStr = "2007-02-15-12:30";
+        date = ConverterUtil.convertXmlToDate(dateStr);
+        assertNotNull(date);
+
+        dateStr = "1997-07-16T19:20:30.45+01:00";
+        date = ConverterUtil.convertXmlToDate(dateStr);
+        assertNotNull(date);
+
+        dateStr = "2011-09-27T14:43:55.162+05:30";
+        date = ConverterUtil.convertXmlToDate(dateStr);
+        assertNotNull(date);
+
+        dateStr = "1997-07-16T19:20:30+01:00";
+        date = ConverterUtil.convertXmlToDate(dateStr);
+        assertNotNull(date);
+
+        dateStr = "1994-11-05T13:15:30Z";
+        date = ConverterUtil.convertXmlToDate(dateStr);
+        assertNotNull(date);
+
+    }
+    
+	public void testConvertToStringFromDataHandler() {
+		String inStr = "Sample Data";
+		DataSource ds = new ByteArrayDataSource(inStr.getBytes());
+		DataHandler dh = new DataHandler(ds);
+		String rawOutStr = ConverterUtil.convertToString(dh);
+		String outStr = new String(Base64.decode(rawOutStr));
+		assertEquals("Not expected content", inStr, outStr);
+	}
 }

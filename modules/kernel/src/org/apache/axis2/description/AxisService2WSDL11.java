@@ -1174,7 +1174,6 @@ public class AxisService2WSDL11 implements Java2WSDLConstants {
 								OUT_PUT_LOCAL_NAME, wsdl);
 						OMElement outElement = fac.createOMElement("content",
 								mime);
-						outElement.addChild(outElement);
                         String outputType=(String) axisBindingOperation.getProperty(WSDL2Constants.ATTR_WHTTP_OUTPUT_SERIALIZATION);
                         outElement.addAttribute("type", (outputType!=null? outputType:"text/xml"), null);
 						outElement.addAttribute("part", outAxisMessage.getPartName(), null);
@@ -1183,6 +1182,24 @@ public class AxisService2WSDL11 implements Java2WSDLConstants {
 					}
 				}
 			}
+
+            // generate fault Messages
+            ArrayList faultyMessages = axisBindingOperation.getFaults();
+            if (faultyMessages != null) {
+                for (Object faultyMessage1 : faultyMessages) {
+                    AxisBindingMessage bindingFaultyMessage = (AxisBindingMessage) faultyMessage1;
+                    if (bindingFaultyMessage != null) {
+                        AxisMessage faultyMessage = bindingFaultyMessage
+                                .getAxisMessage();
+                        OMElement fault = fac.createOMElement(FAULT_LOCAL_NAME,
+                                wsdl);
+                        fault.addAttribute(ATTRIBUTE_NAME, faultyMessage
+                                .getName(), null);
+                        // add policies for fault messages
+                        operation.addChild(fault);
+                    }
+                }
+            }
 		}
 	}
 

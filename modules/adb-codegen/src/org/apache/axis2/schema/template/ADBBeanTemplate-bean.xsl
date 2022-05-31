@@ -39,6 +39,7 @@
         <xsl:variable name="particleClass" select="@particleClass"/>
         <xsl:variable name="hasParticleType" select="@hasParticleType"/>
         <xsl:variable name="usewrapperclasses" select="@usewrapperclasses"/>
+        <xsl:variable name="ignoreunexpected" select="@ignoreunexpected"/>
 
         <!-- write the class header. this should be done only when unwrapped -->
 
@@ -450,6 +451,18 @@
                                <xsl:choose>
                                     <xsl:when test="(@restrictionBaseType)">
                                        <xsl:choose>
+                                        <xsl:when test="(@maxLenFacet) and (@minLenFacet)  and (@patternFacet)">
+                                            if ( <xsl:if test="(@minLenFacet)"> (<xsl:value-of select="$minLenFacet"/> &lt;= java.lang.String.valueOf(param).length())</xsl:if>
+                                                        &amp;&amp; <xsl:if test="(@maxLenFacet)"> (java.lang.String.valueOf(param).length() &lt;= <xsl:value-of select="$maxLenFacet"/>) </xsl:if>
+                                                        &amp;&amp; <xsl:if test="(@patternFacet)"> (org.apache.axis2.databinding.utils.ConverterUtil.convertToString(param).matches("<xsl:value-of select="$patternFacet"/>")) </xsl:if> ) {
+
+                                                this.<xsl:value-of select="$varName"/>=param;
+
+                                            }
+                                            else {
+                                                throw new java.lang.RuntimeException();
+                                            }
+                                        </xsl:when>
                                         <xsl:when test="(@patternFacet)">
                                             if (org.apache.axis2.databinding.utils.ConverterUtil.convertToString(param).matches("<xsl:value-of select="$patternFacet"/>")) {
                                                 this.<xsl:value-of select="$varName"/>=param;
@@ -1301,6 +1314,13 @@
                     </xsl:when>
                     <!-- end of ours block-->
                     <xsl:otherwise>
+
+                        <xsl:if test="property/@default">
+                            if (<xsl:value-of select="$varName"/> instanceof org.apache.axis2.databinding.ADBBean){
+                                    ((org.apache.axis2.databinding.ADBBean)<xsl:value-of select="$varName"/>).serialize(MY_QNAME, xmlWriter,true);
+                            } else {
+                        </xsl:if>
+
                         <xsl:if test="not(property/@simple)">
                             java.lang.String namespace = "<xsl:value-of select="property/@nsuri"/>";
                             java.lang.String _localName = "<xsl:value-of select="$propertyName"/>";
@@ -1408,6 +1428,9 @@
                                                }
                             </xsl:if>
                             xmlWriter.writeEndElement();
+                         <xsl:if test="property/@default">
+                            }
+                         </xsl:if>
                     </xsl:otherwise>
                 </xsl:choose>
             </xsl:otherwise>
@@ -1911,6 +1934,7 @@
       *  Factory class that keeps the parse method
       */
     public static class Factory{
+        private static org.apache.commons.logging.Log log = org.apache.commons.logging.LogFactory.getLog(Factory.class);
 
         <!-- generate some utility factory methods here we must add these methods to a factory class
          since otherwise it gives a compilation exception in jdk 1.4 -->
@@ -2161,6 +2185,7 @@
             </xsl:if>
 
             int event;
+            javax.xml.namespace.QName currentQName = null;
             java.lang.String nillableValue = null;
             java.lang.String prefix ="";
             java.lang.String namespaceuri ="";
@@ -2169,6 +2194,7 @@
                 while (!reader.isStartElement() &amp;&amp; !reader.isEndElement())
                     reader.next();
 
+                currentQName = reader.getName();
                 <xsl:if test="@nillable">
                    nillableValue = reader.getAttributeValue("http://www.w3.org/2001/XMLSchema-instance","nil");
                    if ("true".equals(nillableValue) || "1".equals(nillableValue)){
@@ -3115,7 +3141,7 @@
                                  inside the sequce class -->
                             <xsl:if test="$ordered and $min!=0 and not($particleClassType)">
                                 else{
-                                    // A start element we are not expecting indicates an invalid parameter was passed
+                                    // 1 - A start element we are not expecting indicates an invalid parameter was passed
                                     throw new org.apache.axis2.databinding.ADBException("Unexpected subelement " + reader.getName());
                                 }
                             </xsl:if>
@@ -3131,17 +3157,40 @@
                                 reader.next();
                             <xsl:if test="not($particleClass)">
                                 if (reader.isStartElement())
-                                // A start element we are not expecting indicates a trailing invalid property
-                                throw new org.apache.axis2.databinding.ADBException("Unexpected subelement " + reader.getName());
+                                // 2 - A start element we are not expecting indicates a trailing invalid property
+                                <xsl:if test="$ignoreunexpected">
+                                {
+                                    log.warn("Unexpected subelement " + reader.getLocalName());
+                                    // consume everything, ending on the current element's endtag
+                                    while (!(reader.isEndElement() &amp;&amp; reader.getName().equals(currentQName))) {
+                                        reader.next();
+                                    }
+                                }
+                                </xsl:if>
+                                <xsl:if test="not($ignoreunexpected)">
+                                    throw new org.apache.axis2.databinding.ADBException("Unexpected subelement " + reader.getName());
+                                </xsl:if>
                             </xsl:if>
                         </xsl:if>
 
                         <xsl:if test="property[not(@attribute)]">  <!-- this if is needed to skip all this when there are no propoerties-->
                         <xsl:if test="$unordered and not($particleClass)">
-                          <xsl:if test="not(property/enumFacet) and not($choice or $hasParticleType)">
+                          <xsl:if test="not(property/enumFacet) and not($hasParticleType)">
                              else{
-                                        // A start element we are not expecting indicates an invalid parameter was passed
-                                        throw new org.apache.axis2.databinding.ADBException("Unexpected subelement " + reader.getName());
+                                        // 3 - A start element we are not expecting indicates an invalid parameter was passed
+                                        <xsl:if test="$ignoreunexpected">
+                                            log.warn("Unexpected subelement " + reader.getLocalName());
+                                            // consume everything, ending on the unexpected subelement's endtag
+                                            javax.xml.namespace.QName subQName = reader.getName();
+                                            while (!(reader.isEndElement() &amp;&amp; reader.getName().equals(subQName))) {
+                                                reader.next();
+                                            }
+                                            // skip past this extra element completely
+                                            reader.next();
+                                        </xsl:if>
+                                        <xsl:if test="not($ignoreunexpected)">
+                                            throw new org.apache.axis2.databinding.ADBException("Unexpected subelement " + reader.getName());
+                                        </xsl:if>
                              }
                           </xsl:if>
                              } else {

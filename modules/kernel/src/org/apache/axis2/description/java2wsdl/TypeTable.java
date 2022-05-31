@@ -28,6 +28,7 @@ import javax.xml.datatype.Duration;
 import javax.xml.datatype.XMLGregorianCalendar;
 import javax.xml.namespace.QName;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,8 @@ public class TypeTable {
 
     private HashMap<String,QName> complexTypeMap;
 
+    private HashMap<String , QName> simpleTypeEnum;
+
     /**
      * this map is used to keep the class names with the Qnames.
      */
@@ -59,6 +62,9 @@ public class TypeTable {
         //instantiated
         complexTypeMap = new HashMap<String,QName>();
         this.qNameToClassMap = new HashMap<QName, String>();
+
+        // keep qname of enum
+        simpleTypeEnum = new HashMap<String , QName>();
     }
 
     /* statically populate the simple type map  - this is not likely to
@@ -109,7 +115,7 @@ public class TypeTable {
         simpleTypetoxsd.put("java.util.Date",
                 new QName(Java2WSDLConstants.URI_2001_SCHEMA_XSD, "date", "xs"));
         simpleTypetoxsd.put("java.util.Calendar",
-                new QName(Java2WSDLConstants.URI_2001_SCHEMA_XSD, "dateTime", "xs"));
+                new QName(Java2WSDLConstants.URI_2001_SCHEMA_XSD, "dateTime", "xs"));        
 
         // SQL date time
          simpleTypetoxsd.put("java.sql.Date",
@@ -155,6 +161,8 @@ public class TypeTable {
         //byteArrat
         simpleTypetoxsd.put("base64Binary",
                 new QName(Java2WSDLConstants.URI_2001_SCHEMA_XSD, "base64Binary", "xs"));
+        simpleTypetoxsd.put(XMLGregorianCalendar.class.getName(),
+                new QName(Java2WSDLConstants.URI_2001_SCHEMA_XSD, "date", "xs"));
     }
     
     private static void populateJavaTypeMap(){
@@ -236,17 +244,34 @@ public class TypeTable {
      * Return the complex type map
      * @return  the map with complex types
      */
-    public Map<String,QName> getComplexSchemaMap() {
-        return complexTypeMap;
+    public Map<String,QName> getSimpleTypeEnumMap() {
+        return simpleTypeEnum;
     }
 
-    public void addComplexSchema(String name, QName schemaType) {
-        complexTypeMap.put(name, schemaType);
+    public void addSimpleTypeEnum(String className, QName simpleSchemaType) {
+        simpleTypeEnum.put(className, simpleSchemaType);
     }
 
-    public QName getComplexSchemaType(String name) {
-        return (QName) complexTypeMap.get(name);
-    }   
+    public QName getSimpleTypeEnum(String className) {
+        return (QName) simpleTypeEnum.get(className);
+    }
+
+    /**
+        * Return the complex type map
+        * @return  the map with complex types
+        */
+       public Map<String,QName> getComplexSchemaMap() {
+           return complexTypeMap;
+       }
+
+       public void addComplexSchema(String name, QName schemaType) {
+           complexTypeMap.put(name, schemaType);
+       }
+
+       public QName getComplexSchemaType(String name) {
+           return (QName) complexTypeMap.get(name);
+       }
+
  
     /**
      * Gets the class name for QName.
@@ -289,11 +314,46 @@ public class TypeTable {
 	 */
 	public QName getSchemaTypeName(String name) {
 		QName qName = getSimpleSchemaTypeName(name);
+		if (qName == null) {
+		    qName = getSchemaTypeNameByClass(name);
+		}
 		if( qName == null){
 			qName = getComplexSchemaType(name);
 		}
 		return qName;
 	}
+	
+    /**
+     * Gets the schema type name by class name. Sometimes it's required perform class
+     * name mapping to find correct Schema type.
+     * 
+     * @param name
+     *            the name
+     * @return the schema type name by class
+     */
+    private QName getSchemaTypeNameByClass(String name) {
+        /*
+         * e.g 
+         * XMLGregorianCalendar can be found as following classes.
+         * 1.)com.sun.org.apache.xerces.internal.jaxp.datatype.XMLGregorianCalendarImpl
+         * 2.)org.apache.xerces.jaxp.datatype.XMLGregorianCalendarImpl
+         */
+        try {
+            Class thisClass = Class.forName(name);
+            if(XMLGregorianCalendar.class.isAssignableFrom(thisClass)) {
+                return (QName) simpleTypetoxsd.get(XMLGregorianCalendar.class
+                        .getName());   
+                
+            } else if(Calendar.class.isAssignableFrom(thisClass)) {     
+                return (QName) simpleTypetoxsd.get(Calendar.class
+                        .getName());                 
+            }
+        } catch (ClassNotFoundException e) {           
+            e.printStackTrace();
+        }
+        
+        return null;
+    }
 }
 
 

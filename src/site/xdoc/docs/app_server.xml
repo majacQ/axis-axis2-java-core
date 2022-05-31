@@ -109,6 +109,9 @@
                         Before deploying the Axis2 WAR, edit the <tt>axis2.xml</tt> file and set the
                         <tt>EnableChildFirstClassLoading</tt> parameter to <tt>true</tt>.
                         Please note that this parameter is only supported in Axis2 1.5.5 or higher.
+                        The parameter is already present in the default <tt>axis2.xml</tt> file included in the
+                        WAR distribution, but its value is set to <tt>false</tt>. Therefore it is enough to change
+                        the parameter value.
                     </li>
                     <li>
                         After deployment, modify the application configuration to enable parent last class loading
@@ -136,6 +139,29 @@
                     However, the directory is still under control of WebSphere and manually deployed AAR and MAR files
                     will be removed e.g. when the application is upgraded. It may therefore be a good idea to configure
                     Axis2 to use a repository location outside of the <tt>installedApps</tt> directory.
+                </p>
+            </subsection>
+            <subsection name="Deploying older Axis2 versions">
+                <p>
+                    The instructions given above apply to Axis2 1.5.5 or higher. Older versions don't support
+                    the <tt>EnableChildFirstClassLoading</tt> parameter, and we don't provide any support for
+                    deploying these versions on WAS 6.1 (with the Web Services feature pack installed) or 7.0.
+                    However, IBM has published a <a href="https://www-304.ibm.com/support/docview.wss?uid=swg21315686">technote</a>
+                    with an alternative approach that may work for older Axis2 versions.
+                </p>
+            </subsection>
+            <subsection name="Known issues">
+                <p>
+                    On some WAS versions the following error may occur, e.g. when accessing a WSDL exposed by Axis2:
+                </p>
+<pre>java.lang.VerifyError: JVMVRFY013 class loading constraint violated;
+class=org/apache/xerces/dom/CoreDocumentImpl, method=getDomConfig()Lorg/w3c/dom/DOMConfiguration</pre>
+                <p>
+                    This is caused by the XmlBeans library
+                    packaged with Axis2. This library contains a set of interfaces in the <code>org.w3c.dom</code> package
+                    and this may cause issues with class loaders that don't use a simple parent-first policy.
+                    To avoid this issue, upgrade your WAS to a more recent fix pack level, remove the XmlBeans library
+                    from the Axis2 WAR or remove the content of the <code>org.w3c.dom</code> package from the XmlBeans library.
                 </p>
             </subsection>
         </section>

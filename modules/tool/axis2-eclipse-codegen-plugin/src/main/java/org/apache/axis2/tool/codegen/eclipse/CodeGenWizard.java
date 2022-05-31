@@ -43,6 +43,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.ws.java2wsdl.Java2WSDLCodegenEngine;
 import org.apache.ws.java2wsdl.utils.Java2WSDLCommandLineOption;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
@@ -90,6 +92,8 @@ public class CodeGenWizard extends Wizard implements INewWizard, Java2WSDLConsta
     private int selectedWizardType = SettingsConstants.WSDL_2_JAVA_TYPE;//TODO change this
 
     private int selectedCodegenOptionType = SettingsConstants.CODEGEN_DEFAULT_TYPE;//TODO change this
+    
+    private static final String REFERNCE_FILE_PREFIX = "refernce:file:";
     
     private static Log logger=LogFactory.getLog(CodeGenWizard.class);
 
@@ -173,6 +177,10 @@ public class CodeGenWizard extends Wizard implements INewWizard, Java2WSDLConsta
             switch (selectedWizardType) {
             case SettingsConstants.WSDL_2_JAVA_TYPE:
                 doFinishWSDL2Java();
+                IProject selectedWorkspaceProject = outputPage.getSelectedWorkspaceProject();
+                if(selectedWorkspaceProject != null){
+                	selectedWorkspaceProject.refreshLocal(IResource.DEPTH_INFINITE, new NullProgressMonitor());
+                }
                 break;
             case SettingsConstants.JAVA_2_WSDL_TYPE:
                 doFinishJava2WSDL();
@@ -540,6 +548,17 @@ public class CodeGenWizard extends Wizard implements INewWizard, Java2WSDLConsta
     // Copies all files under srcDir to dstDir.
     // If dstDir does not exist, it will be created.
     public void copyDirectory(File srcDir, File dstDir) throws IOException {
+    	
+		// This only works if the given source directory is unavailable
+		if (!srcDir.exists()) {
+			String path = CodegenWizardPlugin.getDefault().getBundle()
+					.getLocation().substring(REFERNCE_FILE_PREFIX.length() + 1)
+					+ File.separator
+					+ srcDir.getPath().substring(
+							srcDir.getPath().lastIndexOf(File.separator) + 1);
+			srcDir = new File(path);
+		}
+    	
         if (srcDir.isDirectory()) {
             if (!dstDir.exists()) {
                 dstDir.mkdir();

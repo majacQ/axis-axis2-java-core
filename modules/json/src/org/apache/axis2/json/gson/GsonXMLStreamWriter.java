@@ -21,11 +21,13 @@ package org.apache.axis2.json.gson;
 
 import com.google.gson.stream.JsonWriter;
 import org.apache.axis2.context.ConfigurationContext;
-import org.apache.axis2.json.gson.factory.JSONType;
-import org.apache.axis2.json.gson.factory.JsonConstant;
-import org.apache.axis2.json.gson.factory.JsonObject;
-import org.apache.axis2.json.gson.factory.XmlNode;
-import org.apache.axis2.json.gson.factory.XmlNodeGenerator;
+import org.apache.axis2.json.factory.JSONType;
+import org.apache.axis2.json.factory.JsonConstant;
+import org.apache.axis2.json.factory.JsonObject;
+import org.apache.axis2.json.factory.XmlNode;
+import org.apache.axis2.json.factory.XmlNodeGenerator;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.ws.commons.schema.XmlSchema;
 
 import javax.xml.namespace.NamespaceContext;
@@ -42,6 +44,8 @@ import java.util.Stack;
 
 
 public class GsonXMLStreamWriter implements XMLStreamWriter {
+
+    private static final Log log = LogFactory.getLog(GsonXMLStreamWriter.class);
 
     private JsonWriter jsonWriter;
 
@@ -125,6 +129,7 @@ public class GsonXMLStreamWriter implements XMLStreamWriter {
         }
         isProcessed = true;
         this.jsonWriter.beginObject();
+        log.debug("GsonXMLStreamWriter.process() completed");
     }
 
 

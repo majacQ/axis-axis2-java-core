@@ -21,6 +21,8 @@ package org.apache.axis2.databinding.utils;
 
 import junit.framework.TestCase;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.text.SimpleDateFormat;
@@ -158,8 +160,8 @@ public class ConverterUtilTest extends TestCase {
             this.internalTestConvertToDateTime();
             
             // run tests with time zone "Africa/Windhoek"
-            System.out.println( "setting time zone to Africa/Windhoek" );
-            TimeZone.setDefault(TimeZone.getTimeZone("Africa/Windhoek"));
+            System.out.println( "setting time zone to Africa/Tunis" );
+            TimeZone.setDefault(TimeZone.getTimeZone("Africa/Tunis"));
             this.internalTestConvertToDateTime();
 
             // run tests with time zone "Australia/Darwin"
@@ -560,5 +562,25 @@ public class ConverterUtilTest extends TestCase {
 
     }
 
+    public void testCompareInt() {
+        // https://stackoverflow.com/questions/46372764/axis2-adb-and-mininclusive-2147483648
+        assertThat(ConverterUtil.compare(3, "-2147483648")).isGreaterThan(0);
+    }
 
+    public void testCompareBigIntegerValueIsLessThanTotalDigitsFacetRestriction() {
+        //AXIS2-5724 - Handle Decimal String value when casting to Long.
+        BigInteger value = BigInteger.valueOf(100L);
+        String totalDigitsFromXsd = "3";
+        String decimalNotationString = ConverterUtil.convertToStandardDecimalNotation(totalDigitsFromXsd).toPlainString();
+        assertThat(ConverterUtil.compare(value, decimalNotationString)).isLessThan(0L);
+    }
+
+    public void testCompareBigIntegerValueIsGreaterThanOrEqualToTotalDigitsFacetRestriction() {
+        //AXIS2-5724 - Handle Decimal String value when casting to Long.
+        BigInteger value = BigInteger.valueOf(1000L);
+        String totalDigitsFromXsd = "3";
+        String decimalNotationString = ConverterUtil.convertToStandardDecimalNotation(totalDigitsFromXsd).toPlainString();
+        long result = ConverterUtil.compare(value, decimalNotationString);
+        assertThat(result).isGreaterThanOrEqualTo(0L);
+    }
 }

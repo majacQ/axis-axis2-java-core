@@ -17,15 +17,19 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>systests</artifactId>
-        <version>1.8.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
     </parent>
+
     <artifactId>webapp-tests</artifactId>
+
     <url>http://axis.apache.org/axis2/java/core/</url>
+
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -35,8 +39,15 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.google.truth</groupId>
-            <artifactId>truth</artifactId>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>echo</artifactId>
+            <version>${project.version}</version>
+            <type>aar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -48,20 +59,10 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-jdk14</artifactId>
-            <version>1.6.6</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
-    <!-- htmlunit requires newer versions of certain libraries -->
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>commons-io</groupId>
-                <artifactId>commons-io</artifactId>
-                <version>2.4</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+
     <build>
         <plugins>
             <plugin>
@@ -69,74 +70,74 @@
                 <artifactId>alta-maven-plugin</artifactId>
                 <executions>
                     <execution>
+                        <id>war-location</id>
                         <goals>
                             <goal>generate-properties</goal>
                         </goals>
                         <configuration>
                             <name>webapp</name>
                             <value>%file%</value>
-                            <artifacts>
-                                <artifact>
-                                    <groupId>${project.groupId}</groupId>
-                                    <artifactId>axis2-webapp</artifactId>
-                                    <type>war</type>
-                                </artifact>
-                            </artifacts>
+                            <artifactSet>
+                                <dependencySet>
+                                    <scope>test</scope>
+                                    <includes>
+                                        <include>*:axis2-webapp:war:*</include>
+                                    </includes>
+                                </dependencySet>
+                            </artifactSet>
                         </configuration>
                     </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <executions>
                     <execution>
-                        <id>reserve-network-port</id>
+                        <id>aar-location</id>
                         <goals>
-                            <goal>reserve-network-port</goal>
+                            <goal>generate-test-resources</goal>
                         </goals>
-                        <phase>pre-integration-test</phase>
                         <configuration>
-                            <portNames>
-                                <portName>jetty.stopPort</portName>
-                                <portName>jetty.httpPort</portName>
-                            </portNames>
+                            <name>echo-service-location.txt</name>
+                            <value>%file%</value>
+                            <artifactSet>
+                                <dependencySet>
+                                    <scope>test</scope>
+                                    <includes>
+                                        <include>*:echo:aar:*</include>
+                                    </includes>
+                                </dependencySet>
+                            </artifactSet>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-maven-plugin</artifactId>
-                <configuration>
-                    <stopKey>foo</stopKey>
-                    <stopPort>${jetty.stopPort}</stopPort>
-                    <stopWait>10</stopWait>
-                    <httpConnector>
-                        <port>${jetty.httpPort}</port>
-                    </httpConnector>
-                    <war>${webapp}</war>
-                    <webApp>
-                        <contextPath>/axis2</contextPath>
-                    </webApp>
-                </configuration>
+                <groupId>com.github.veithen.daemon</groupId>
+                <artifactId>daemon-maven-plugin</artifactId>
                 <executions>
                     <execution>
                         <id>start-jetty</id>
-                        <phase>pre-integration-test</phase>
                         <goals>
-                            <goal>deploy-war</goal>
+                            <goal>start</goal>
                         </goals>
                         <configuration>
-                            <!-- TODO: necessary? -->
-                            <daemon>true</daemon>
+                            <daemonArtifact>
+                                <artifactId>jetty-daemon</artifactId>
+                            </daemonArtifact>
+                            <daemonConfiguration>
+                                <resourceBases>
+                                    <resourceBase>${webapp}</resourceBase>
+                                </resourceBases>
+                                <contextPath>/axis2</contextPath>
+                            </daemonConfiguration>
+                            <ports>
+                                <port>
+                                    <name>http</name>
+                                    <propertyName>jetty.httpPort</propertyName>
+                                </port>
+                            </ports>
                         </configuration>
                     </execution>
                     <execution>
                         <id>stop-jetty</id>
-                        <phase>post-integration-test</phase>
                         <goals>
-                            <goal>stop</goal>
+                            <goal>stop-all</goal>
                         </goals>
                     </execution>
                 </executions>

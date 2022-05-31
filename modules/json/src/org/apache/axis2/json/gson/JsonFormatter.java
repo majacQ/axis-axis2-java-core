@@ -20,13 +20,14 @@
 package org.apache.axis2.json.gson;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonWriter;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMOutputFormat;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.Constants;
 import org.apache.axis2.context.MessageContext;
-import org.apache.axis2.json.gson.factory.JsonConstant;
+import org.apache.axis2.json.factory.JsonConstant;
 import org.apache.axis2.transport.MessageFormatter;
 import org.apache.axis2.wsdl.WSDLConstants;
 import org.apache.commons.logging.Log;
@@ -48,11 +49,7 @@ import java.util.Iterator;
 public class JsonFormatter implements MessageFormatter {
     private static final Log log = LogFactory.getLog(JsonFormatter.class);
 
-    public byte[] getBytes(MessageContext messageContext, OMOutputFormat omOutputFormat) throws AxisFault {
-        return new byte[0];
-    }
-
-    public void writeTo(MessageContext outMsgCtxt, OMOutputFormat omOutputFormat, OutputStream outputStream, boolean b) throws AxisFault {
+    public void writeTo(MessageContext outMsgCtxt, OMOutputFormat omOutputFormat, OutputStream outputStream, boolean preserve) throws AxisFault {
         String charSetEncoding = (String) outMsgCtxt.getProperty(Constants.Configuration.CHARACTER_SET_ENCODING);
         JsonWriter jsonWriter;
         String msg;
@@ -94,11 +91,7 @@ public class JsonFormatter implements MessageFormatter {
                                                                     outMsgCtxt.getConfigurationContext());
                 try {
                     xmlsw.writeStartDocument();
-                    if (b) {
-                        element.serialize(xmlsw);
-                    } else {
-                        element.serializeAndConsume(xmlsw);
-                    }
+                    element.serialize(xmlsw, preserve);
                     xmlsw.writeEndDocument();
                 } catch (XMLStreamException e) {
                     throw new AxisFault("Error while writing to the output stream using JsonWriter", e);
@@ -106,7 +99,10 @@ public class JsonFormatter implements MessageFormatter {
 
             } else {
                 try {
-                    Gson gson = new Gson();
+                    GsonBuilder gsonBuilder = new GsonBuilder(); 
+                    // XSS protection, encode JSON Strings as HTML
+                    gsonBuilder.registerTypeAdapter(String.class, new JsonHtmlEncoder());
+                    Gson gson = gsonBuilder.create();
                     jsonWriter.beginObject();
                     jsonWriter.name(JsonConstant.RESPONSE);
                     Type returnType = (Type) outMsgCtxt.getProperty(JsonConstant.RETURN_TYPE);
@@ -120,6 +116,7 @@ public class JsonFormatter implements MessageFormatter {
                     throw AxisFault.makeFault(e);
                 }
             }
+            log.debug("JsonFormatter.writeTo() has completed");
         } catch (UnsupportedEncodingException e) {
             msg = "Exception occur when try to encode output stream usig  " +
                     Constants.Configuration.CHARACTER_SET_ENCODING + " charset";

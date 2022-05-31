@@ -23,11 +23,11 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.context.ConfigurationContext;
-import org.apache.axis2.json.gson.factory.JSONType;
-import org.apache.axis2.json.gson.factory.JsonConstant;
-import org.apache.axis2.json.gson.factory.JsonObject;
-import org.apache.axis2.json.gson.factory.XmlNode;
-import org.apache.axis2.json.gson.factory.XmlNodeGenerator;
+import org.apache.axis2.json.factory.JSONType;
+import org.apache.axis2.json.factory.JsonConstant;
+import org.apache.axis2.json.factory.JsonObject;
+import org.apache.axis2.json.factory.XmlNode;
+import org.apache.axis2.json.factory.XmlNodeGenerator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.ws.commons.schema.XmlSchema;
@@ -133,6 +133,7 @@ public class GsonXMLStreamReader implements XMLStreamReader {
             newNodeMap.put(elementQname, mainXmlNode);
             configContext.setProperty(JsonConstant.XMLNODES, newNodeMap);
         }
+        log.debug("GsonXMLStreamReader.process() completed");
         isProcessed = true;
     }
 

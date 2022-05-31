@@ -17,16 +17,20 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>axis2</artifactId>
-        <version>1.8.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
     </parent>
+
     <artifactId>apidocs</artifactId>
-    <name>Javadoc</name>
     <packaging>pom</packaging>
+
+    <name>Javadoc</name>
+
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -71,7 +75,7 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>axis2-jaxbri</artifactId>
+            <artifactId>axis2-jaxbri-codegen</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -272,31 +276,33 @@
             <version>${project.version}</version>
         </dependency>
     </dependencies>
+
     <build>
         <plugins>
+            <!-- https://issues.apache.org/jira/browse/MJAVADOC-469 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>create-javadoc-compat-out-dir</id>
+                        <phase>pre-site</phase>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>javadoc-compat-out-dir</name>
+                            <value>${project.build.directory}</value>
+                            <regex>\\</regex>
+                            <replacement>\\\\</replacement>
+                            <failIfNoMatch>false</failIfNoMatch>
+                        </configuration>
+                    </execution>
+                </executions>
+             </plugin>
             <plugin>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <executions>
-                    <execution>
-                        <id>extract-resource-info</id>
-                        <phase>pre-site</phase>
-                        <goals>
-                            <goal>javadoc</goal>
-                        </goals>
-                        <configuration>
-                            <docletArtifacts>
-                                <docletArtifact>
-                                    <groupId>${project.groupId}</groupId>
-                                    <artifactId>axis2-transport-testkit</artifactId>
-                                    <version>${project.version}</version>
-                                </docletArtifact>
-                            </docletArtifacts>
-                            <doclet>org.apache.axis2.transport.testkit.doclet.ResourceInfoDoclet</doclet>
-                            <useStandardDocletOptions>false</useStandardDocletOptions>
-                            <show>private</show>
-                            <additionalparam>-out ${project.build.directory}/resource-info.dat</additionalparam>
-                        </configuration>
-                    </execution>
                     <execution>
                         <id>site-javadoc</id>
                         <phase>site</phase>
@@ -304,18 +310,7 @@
                             <goal>javadoc-no-fork</goal>
                         </goals>
                         <configuration>
-                            <docletArtifacts>
-                                <docletArtifact>
-                                    <groupId>${project.groupId}</groupId>
-                                    <artifactId>axis2-transport-testkit</artifactId>
-                                    <version>${project.version}</version>
-                                </docletArtifact>
-                            </docletArtifacts>
-                            <doclet>org.apache.axis2.transport.testkit.doclet.TestkitJavadocDoclet</doclet>
-                            <useStandardDocletOptions>true</useStandardDocletOptions>
-                            <additionalparam>
-                                -resource-info ${project.build.directory}/resource-info.dat
-                            </additionalparam>
+			    <source>8</source>
                             <reportOutputDirectory>${project.reporting.outputDirectory}</reportOutputDirectory>
                             <destDir>.</destDir>
                         </configuration>
@@ -323,11 +318,10 @@
                 </executions>
                 <configuration>
                     <additionalJOption>-J-Xmx256m</additionalJOption>
+                    <detectJavaApiLink>false</detectJavaApiLink>
                     <links>
-                        <link>http://docs.oracle.com/javase/1.5.0/docs/api/</link>
-                        <link>http://docs.oracle.com/javaee/5/api/</link>
+                        <link>https://docs.oracle.com/javase/7/docs/api/</link>
                         <link>http://ws.apache.org/axiom/apidocs/</link>
-                        <link>http://jaxen.org/apidocs/</link>
                     </links>
                     <includeDependencySources>true</includeDependencySources>
                     <dependencySourceIncludes>

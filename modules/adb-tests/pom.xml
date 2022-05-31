@@ -17,34 +17,33 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>axis2</artifactId>
-        <version>1.8.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>axis2-adb-tests</artifactId>
+
     <name>Apache Axis2 - ADB Tests</name>
     <description>ADB Tests</description>
     <url>http://axis.apache.org/axis2/java/core/</url>
+
     <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/adb-tests</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/adb-tests</developerConnection>
-        <url>http://svn.apache.org/viewvc/axis/axis2/java/core/trunk/modules/adb-tests</url>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=axis-axis2-java-core.git;a=summary</url>
+        <tag>HEAD</tag>
     </scm>
+
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>axis2-adb</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>axis2-transport-local</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
@@ -60,8 +59,13 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>xmlunit</groupId>
-            <artifactId>xmlunit</artifactId>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.xmlunit</groupId>
+            <artifactId>xmlunit-legacy</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -78,6 +82,18 @@
         <dependency>
             <groupId>com.sun.xml.ws</groupId>
             <artifactId>jaxws-rt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>schema-validation</artifactId>
+            <version>${project.version}</version>
+            <type>mar</type>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -178,6 +194,18 @@
                             </xsdFiles>
                             <helperMode>true</helperMode>
                             <packageName>helper.</packageName>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>xsd2java-axis2-5771</id>
+                        <goals>
+                            <goal>generate-test-sources</goal>
+                        </goals>
+                        <configuration>
+                            <xsdFiles>
+                                <xsdFile>src/test/xsd/AXIS2-5771.xsd</xsdFile>
+                            </xsdFiles>
+                            <ignoreUnexpected>true</ignoreUnexpected>
                         </configuration>
                     </execution>
                 </executions>
@@ -304,80 +332,121 @@
                             <outputDirectory>${project.build.directory}/wsdl2code/AXIS2-5809</outputDirectory>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>wsdl2code-axis2-5887</id>
+                        <goals>
+                            <goal>generate-test-sources</goal>
+                        </goals>
+                        <configuration>
+                            <wsdlFile>src/test/wsdl/AXIS2-5887.wsdl</wsdlFile>
+                            <syncMode>sync</syncMode>
+                            <unpackClasses>true</unpackClasses>
+                            <namespaceMappings>
+                                <namespaceMapping>
+                                    <uri>webservice/xtc/plugins/Speed4Trade/com</uri>
+                                    <packageName>org.apache.axis2.databinding.axis2_5887.client</packageName>
+                                </namespaceMapping>
+                            </namespaceMappings>
+                            <packageName>org.apache.axis2.databinding.axis2_5887.client</packageName>
+                            <outputDirectory>${project.build.directory}/wsdl2code/AXIS2-5887</outputDirectory>
+                        </configuration>
+                    </execution>
                 </executions>
                 <configuration>
                     <databindingName>adb</databindingName>
                 </configuration>
             </plugin>
             <plugin>
-                <artifactId>maven-resources-plugin</artifactId>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>axis2-repo-maven-plugin</artifactId>
+                <version>${project.version}</version>
                 <executions>
                     <execution>
-                        <phase>generate-test-resources</phase>
+                        <id>client-repo</id>
                         <goals>
-                            <goal>copy-resources</goal>
+                            <goal>create-test-repository</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.build.directory}/repo</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>src/test/repo</directory>
-                                    <filtering>false</filtering>
-                                </resource>
-                            </resources>
+                            <outputDirectory>${project.build.directory}/repo/client</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>repo-axis2-5741</id>
+                        <goals>
+                            <goal>create-test-repository</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/repo/AXIS2-5741</outputDirectory>
+                            <serviceDescriptions>
+                                <serviceDescription>
+                                    <directory>${project.build.directory}/wsdl2code/AXIS2-5741/resources</directory>
+                                    <parameters>
+                                        <parameter>
+                                            <name>ServiceClass</name>
+                                            <value>org.apache.axis2.databinding.axis2_5741.service.FiverxLinkServiceImpl</value>
+                                        </parameter>
+                                    </parameters>
+                                </serviceDescription>
+                            </serviceDescriptions>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>repo-axis2-5749</id>
+                        <goals>
+                            <goal>create-test-repository</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/repo/AXIS2-5749</outputDirectory>
+                            <serviceDescriptions>
+                                <serviceDescription>
+                                    <directory>${project.build.directory}/wsdl2code/AXIS2-5749/resources</directory>
+                                    <parameters>
+                                        <parameter>
+                                            <name>ServiceClass</name>
+                                            <value>org.apache.axis2.databinding.axis2_5749.service.ColorServiceImpl</value>
+                                        </parameter>
+                                    </parameters>
+                                </serviceDescription>
+                            </serviceDescriptions>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>repo-axis2-5809</id>
+                        <goals>
+                            <goal>create-test-repository</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/repo/AXIS2-5809</outputDirectory>
+                            <serviceDescriptions>
+                                <serviceDescription>
+                                    <directory>${project.build.directory}/wsdl2code/AXIS2-5809/resources</directory>
+                                    <parameters>
+                                        <parameter>
+                                            <name>ServiceClass</name>
+                                            <value>org.apache.axis2.databinding.axis2_5809.EchoServiceImpl</value>
+                                        </parameter>
+                                    </parameters>
+                                </serviceDescription>
+                            </serviceDescriptions>
                         </configuration>
                     </execution>
                 </executions>
+                <configuration>
+                    <generatedAxis2xml>
+                        <modules>
+                            <module>schema-validation</module>
+                        </modules>
+                    </generatedAxis2xml>
+                </configuration>
             </plugin>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>xml-maven-plugin</artifactId>
-                <version>1.0.1</version>
-                <executions>
-                    <execution>
-                        <phase>generate-test-resources</phase>
-                        <goals>
-                            <goal>transform</goal>
-                        </goals>
-                        <configuration>
-                            <transformationSets>
-                                <transformationSet>
-                                    <dir>${project.build.directory}/wsdl2code/AXIS2-5741/resources</dir>
-                                    <includes>
-                                        <include>services.xml</include>
-                                    </includes>
-                                    <stylesheet>src/test/xslt/AXIS2-5741.xsl</stylesheet>
-                                    <outputDir>${project.build.directory}/repo/AXIS2-5741/services/FiverxLinkService/META-INF</outputDir>
-                                </transformationSet>
-                                <transformationSet>
-                                    <dir>${project.build.directory}/wsdl2code/AXIS2-5749/resources</dir>
-                                    <includes>
-                                        <include>services.xml</include>
-                                    </includes>
-                                    <stylesheet>src/test/xslt/AXIS2-5749.xsl</stylesheet>
-                                    <outputDir>${project.build.directory}/repo/AXIS2-5749/services/ColorService/META-INF</outputDir>
-                                </transformationSet>
-                                <transformationSet>
-                                    <dir>${project.build.directory}/wsdl2code/AXIS2-5809/resources</dir>
-                                    <includes>
-                                        <include>services.xml</include>
-                                    </includes>
-                                    <stylesheet>src/test/xslt/AXIS2-5809.xsl</stylesheet>
-                                    <outputDir>${project.build.directory}/repo/AXIS2-5809/services/EchoService/META-INF</outputDir>
-                                </transformationSet>
-                            </transformationSets>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>jaxws-maven-plugin</artifactId>
+                <groupId>com.github.veithen.maven</groupId>
+                <artifactId>wsimport-maven-plugin</artifactId>
                 <executions>
                     <execution>
                         <id>wsimport-mtom</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
@@ -389,31 +458,33 @@
                     <execution>
                         <id>wsimport-axis2-5741</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
                                 <wsdlFile>${basedir}/src/test/wsdl/AXIS2-5741.wsdl</wsdlFile>
                             </wsdlFiles>
                             <packageName>org.apache.axis2.databinding.axis2_5741.client</packageName>
+                            <generateService>true</generateService>
                         </configuration>
                     </execution>
                     <execution>
                         <id>wsimport-axis2-5749</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
                                 <wsdlFile>${basedir}/src/test/wsdl/AXIS2-5749.wsdl</wsdlFile>
                             </wsdlFiles>
                             <packageName>org.apache.axis2.databinding.axis2_5749.client</packageName>
+                            <generateService>true</generateService>
                         </configuration>
                     </execution>
                     <execution>
                         <id>wsimport-axis2-5750</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
@@ -425,7 +496,7 @@
                     <execution>
                         <id>wsimport-axis2-5758</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
@@ -437,7 +508,7 @@
                     <execution>
                         <id>wsimport-axis2-5799</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
@@ -447,13 +518,6 @@
                         </configuration>
                     </execution>
                 </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>com.sun.xml.ws</groupId>
-                        <artifactId>jaxws-tools</artifactId>
-                        <version>${jaxws.tools.version}</version>
-                    </dependency>
-                </dependencies>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

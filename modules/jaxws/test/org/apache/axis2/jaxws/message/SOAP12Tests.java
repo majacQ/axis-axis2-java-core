@@ -27,10 +27,12 @@ import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPModelBuilder;
 import org.apache.axis2.jaxws.message.factory.MessageFactory;
 import org.apache.axis2.jaxws.message.factory.XMLStringBlockFactory;
-import org.apache.axis2.jaxws.message.util.Reader2Writer;
 import org.apache.axis2.jaxws.registry.FactoryRegistry;
 import org.apache.axis2.jaxws.unitTest.TestLogger;
-import org.apache.log4j.BasicConfigurator;
+
+import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.logging.log4j.core.config.DefaultConfiguration;
+import org.apache.logging.log4j.Level;
 
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamReader;
@@ -68,7 +70,8 @@ public class SOAP12Tests extends TestCase {
     }
     
     static {
-        BasicConfigurator.configure();
+        Configurator.initialize(new DefaultConfiguration());
+        Configurator.setRootLevel(Level.DEBUG);
     }
 
     /**
@@ -102,8 +105,7 @@ public class SOAP12Tests extends TestCase {
         
         // To check that the output is correct, get the String contents of the 
         // reader
-        Reader2Writer r2w = new Reader2Writer(om.getXMLStreamReader());
-        String newText = r2w.getAsString();
+        String newText = OMXMLBuilderFactory.createStAXOMBuilder(om.getXMLStreamReader()).getDocumentElement().toString();
         TestLogger.logger.debug(newText);
         assertTrue(newText.contains(sampleText));
         assertTrue(newText.contains("soap"));
@@ -147,8 +149,7 @@ public class SOAP12Tests extends TestCase {
         
         // To check that the output is correct, get the String contents of the 
         // reader
-        Reader2Writer r2w = new Reader2Writer(om.getXMLStreamReaderWithoutCaching());
-        String newText = r2w.getAsString();
+        String newText = OMXMLBuilderFactory.createStAXOMBuilder(om.getXMLStreamReaderWithoutCaching()).getDocumentElement().toString();
         TestLogger.logger.debug(newText);
         assertTrue(newText.contains(sampleText));
         assertTrue(newText.contains("soap"));

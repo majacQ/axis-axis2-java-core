@@ -79,6 +79,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -624,10 +626,9 @@ public class ConverterUtil {
         calendar.set(Calendar.ZONE_OFFSET, timeZoneOffSet);
 
         // set the day light off set only if time zone
-        if (source.length() >= 10) {
+        if (source.length() > 10) {
             calendar.set(Calendar.DST_OFFSET, 0);
         }
-        calendar.getTimeInMillis();
         if (bc){
             calendar.set(Calendar.ERA, GregorianCalendar.BC);
         }
@@ -671,7 +672,8 @@ public class ConverterUtil {
         if ((s == null) || s.equals("")){
             return null;
         }
-        return new Token(s);
+	// add trim() for AXIS2-5575
+        return new Token(s.trim());
     }
 
 
@@ -1286,7 +1288,9 @@ public class ConverterUtil {
      * @return 0 if equal , + value if greater than , - value if less than
      */
     public static int compare(int intValue, String value) {
-        return intValue - Integer.parseInt(value);
+        int other = Integer.parseInt(value);
+        return intValue < other ? -1 : (intValue == other ? 0 : 1);
+
     }
 
     /**
@@ -1342,7 +1346,15 @@ public class ConverterUtil {
      * @return 0 if equal , + value if greater than , - value if less than
      */
     public static long compare(BigInteger binBigInteger, String value) {
-        return binBigInteger.longValue() - Long.parseLong(value);
+        //AXIS2-5724 - Handle Decimal String value when casting to Long.
+        long param;
+        try {
+            NumberFormat nf = NumberFormat.getInstance();
+            param = nf.parse(value).longValue();
+        } catch (Exception e) {
+            throw new ObjectConversionException(e);
+        }
+        return binBigInteger.longValue() - param;
     }
 
     /**

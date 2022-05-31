@@ -66,7 +66,7 @@
         <url>http://issues.apache.org/jira/browse/AXIS2</url>
     </issueManagement>
     <properties>
-        <ant.version>1.7.0</ant.version>
+        <ant.version>1.10.11</ant.version>
         <antlr.version>2.7.7</antlr.version>
         <axiom.version>1.2.13</axiom.version>
         <bsf.version>2.4.0</bsf.version>
@@ -103,7 +103,11 @@
         <plexus.utils.version>1.4.9</plexus.utils.version>
         <rhino.version>1.6R7</rhino.version>
         <servlet.api.version>2.3</servlet.api.version>
+  <<<<<<< dependabot/maven/modules/parent/org.springframework-spring-beans-5.2.21.RELEASE
         <spring.version>5.2.21.RELEASE</spring.version>
+  =======
+        <spring.version>5.2.22.RELEASE</spring.version>
+  >>>>>>> 1_5
         <stax.api.version>1.0.1</stax.api.version>
         <stax.impl.artifact>wstx-asl</stax.impl.artifact>
         <stax.impl.groupid>org.codehaus.woodstox</stax.impl.groupid>
@@ -112,7 +116,7 @@
         <woden.version>1.0M8</woden.version>
         <wsdl4j.version>1.6.2</wsdl4j.version>
         <xalan.version>2.7.0</xalan.version>
-        <xmlbeans.version>2.3.0</xmlbeans.version>
+        <xmlbeans.version>3.0.0</xmlbeans.version>
         <xml_resolver.version>1.2</xml_resolver.version>
         <xmlschema.version>1.4.3</xmlschema.version>
         <xmlunit.version>1.1</xmlunit.version>

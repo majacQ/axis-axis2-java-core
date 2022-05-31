@@ -19,6 +19,9 @@
 
 package org.apache.axis2.json.gson.rpc;
 
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.Log;
+
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 
@@ -29,6 +32,8 @@ import java.lang.reflect.Method;
 
 public class JsonUtils {
 
+    private static final Log log = LogFactory.getLog(JsonUtils.class);
+
     public static Object invokeServiceClass(JsonReader jsonReader,
                                             Object service,
                                             Method operation ,
@@ -37,27 +42,37 @@ public class JsonUtils {
             IllegalAccessException, IOException  {
 
         Object[] methodParam = new Object[paramCount];
-        Gson gson = new Gson();
-        String[] argNames = new String[paramCount];
-
-        if( ! jsonReader.isLenient()){
-            jsonReader.setLenient(true);
-        }
-        jsonReader.beginObject();
-        String messageName=jsonReader.nextName();     // get message name from input json stream
-        jsonReader.beginArray();
-
-        int i = 0;
-        for (Class paramType : paramClasses) {
+	try {
+            Gson gson = new Gson();
+            String[] argNames = new String[paramCount];
+    
+            if( ! jsonReader.isLenient()){
+                jsonReader.setLenient(true);
+            }
             jsonReader.beginObject();
-            argNames[i] = jsonReader.nextName();
-            methodParam[i] = gson.fromJson(jsonReader, paramType);   // gson handle all types well and return an object from it
+            String messageName=jsonReader.nextName();     // get message name from input json stream
+            if (messageName == null || !messageName.equals(operation.getName())) {
+                log.error("JsonUtils.invokeServiceClass() throwing IOException, messageName: " +messageName+ " is unknown, it does not match the axis2 operation, the method name: " + operation.getName());
+                throw new IOException("Bad Request");
+            }
+            jsonReader.beginArray();
+    
+            int i = 0;
+            for (Class paramType : paramClasses) {
+                jsonReader.beginObject();
+                argNames[i] = jsonReader.nextName();
+                log.debug("JsonUtils.invokeServiceClass() on messageName: " +messageName+ " , is currently processing argName: " + argNames[i]);
+                methodParam[i] = gson.fromJson(jsonReader, paramType);   // gson handle all types well and return an object from it
+                jsonReader.endObject();
+                i++;
+            }
+    
+            jsonReader.endArray();
             jsonReader.endObject();
-            i++;
+        } catch (Exception ex) {
+            log.error(ex.getMessage(), ex);
+            throw new IOException("Bad Request");
         }
-
-        jsonReader.endArray();
-        jsonReader.endObject();
 
         return  operation.invoke(service, methodParam);
 
@@ -67,9 +82,11 @@ public class JsonUtils {
         for (Method method : methodSet) {
             String mName = method.getName();
             if (mName.equals(methodName)) {
+                log.debug("JsonUtils.getOpMethod() returning methodName: " +methodName);
                 return method;
             }
         }
+        log.debug("JsonUtils.getOpMethod() returning null");
         return null;
     }
 

@@ -5,10 +5,10 @@ http://axis.apache.org/axis2/java/core/
 ------------------------------------------------------
 
 ___________________
-Building
+Building 
 ===================
 
-We use Maven 2 (http://maven.apache.org) to build, and you'll find a
+We use Maven 3 (http://maven.apache.org) to build, and you'll find a
 pom.xml in each module, as well as at the top level.  Use "mvn install"
 (or "mvn clean install" to clean up first) to build.
 
@@ -47,7 +47,7 @@ be performed:
      the META-INF directory
   3) Drop the jar file to the $AXIS2_HOME/WEB-INF/services directory
      where $AXIS2_HOME represents the install directory of your Axis2 
-     runtime. (In the case of a servelet container this would be the
+     runtime. (In the case of a servlet container this would be the
      "axis2" directory inside "webapps".)
 
 To verify the deployment please go to http://<yourip>:<port>/axis2/ and

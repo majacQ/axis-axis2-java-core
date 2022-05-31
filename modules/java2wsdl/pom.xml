@@ -19,17 +19,29 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>axis2</artifactId>
-        <version>1.8.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
+
     <artifactId>axis2-java2wsdl</artifactId>
+
     <name>Apache Axis2 - Java2WSDL</name>
     <description>To generate WSDL file for a given Java class</description>
+    <url>http://axis.apache.org/axis2/java/core/</url>
+
+    <scm>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=axis-axis2-java-core.git;a=summary</url>
+        <tag>HEAD</tag>
+    </scm>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.axis2</groupId>
@@ -71,7 +83,7 @@
         </dependency>        
          <dependency>
             <groupId>com.sun.xml.ws</groupId>
-            <artifactId>jaxws-tools</artifactId>           
+            <artifactId>jaxws-tools</artifactId>
             <exclusions>
                 <exclusion>
                     <groupId>com.sun.xml.ws</groupId>
@@ -84,13 +96,13 @@
             </exclusions>
         </dependency>
         <dependency>
-        	<groupId>com.sun.xml.bind</groupId>
+            <groupId>org.glassfish.jaxb</groupId>
             <artifactId>jaxb-xjc</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
              <groupId>com.sun.xml.ws</groupId>
-             <artifactId>jaxws-rt</artifactId>            
+             <artifactId>jaxws-rt</artifactId>
              <scope>test</scope>
         </dependency>
         <dependency>
@@ -99,12 +111,7 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    <url>http://axis.apache.org/axis2/java/core/</url>
-    <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/java2wsdl</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/java2wsdl</developerConnection>
-        <url>http://svn.apache.org/viewvc/axis/axis2/java/core/trunk/modules/java2wsdl</url>
-    </scm>
+
     <build>
         <sourceDirectory>src</sourceDirectory>
         <testSourceDirectory>test</testSourceDirectory>
@@ -160,7 +167,7 @@
                         </goals>
                         <phase>test</phase>
                         <configuration>
-                            <tasks unless="maven.test.skip">
+                            <target unless="maven.test.skip">
                                 <echo message="Generating p2n.wsdl" />
                                 
                                 <java classname="org.apache.ws.java2wsdl.Java2WSDL" classpathref="maven.test.classpath" fork="true" failonerror="true">
@@ -175,7 +182,7 @@
                                     <arg value="-stn" />
                                     <arg value="http://www.example.org/calculator-service" />
                                 </java>
-                            </tasks>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>
@@ -216,7 +223,8 @@
                 </executions>
             </plugin>
         </plugins>
-    </build>    
+    </build>
+
     <profiles>
     	<profile>
         <id>default-tools.jar</id>

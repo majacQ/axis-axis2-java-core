@@ -28,6 +28,9 @@ import com.sun.tools.xjc.api.S2JJAXBModel;
 import com.sun.tools.xjc.api.SchemaCompiler;
 import com.sun.tools.xjc.api.XJC;
 import com.sun.tools.xjc.BadCommandLineException;
+
+import org.apache.axiom.blob.Blobs;
+import org.apache.axiom.blob.MemoryBlob;
 import org.apache.axis2.description.AxisMessage;
 import org.apache.axis2.description.AxisOperation;
 import org.apache.axis2.description.AxisService;
@@ -71,11 +74,13 @@ public class CodeGenerationUtility {
      * @param additionalSchemas
      * @throws RuntimeException
      */
-    public static TypeMapper processSchemas(final List schemas,
+    public static TypeMapper processSchemas(final List<XmlSchema> schemas,
                                             Element[] additionalSchemas,
                                             CodeGenConfiguration cgconfig)
             throws RuntimeException {
         try {
+            // Work around MNG-6506.
+            CodeGenerationUtility.class.getClassLoader().loadClass("com.sun.tools.xjc.reader.xmlschema.bindinfo.package-info");
 
             //check for the imported types. Any imported types are supposed to be here also
             if (schemas == null || schemas.isEmpty()) {
@@ -85,7 +90,7 @@ public class CodeGenerationUtility {
                 return new DefaultTypeMapper();
             }
 
-            final Map schemaToInputSourceMap = new HashMap();
+            final Map<XmlSchema, InputSource> schemaToInputSourceMap = new HashMap<>();
             final Map<String, StringBuffer> publicIDToStringMap = new HashMap<String, StringBuffer>();
 
             //create the type mapper
@@ -98,7 +103,7 @@ public class CodeGenerationUtility {
 
 
             for (int i = 0; i < schemas.size(); i++) {
-                XmlSchema schema = (XmlSchema)schemas.get(i);
+                XmlSchema schema = schemas.get(i);
                 InputSource inputSource =
                         new InputSource(new StringReader(getSchemaAsString(schema)));
                 //here we have to set a proper system ID. otherwise when processing the
@@ -113,13 +118,11 @@ public class CodeGenerationUtility {
             File outputDir = new File(cgconfig.getOutputLocation(), "src");
             outputDir.mkdir();
 
-            Map nsMap = cgconfig.getUri2PackageNameMap();
+            Map<String,String> nsMap = cgconfig.getUri2PackageNameMap();
             EntityResolver resolver = new EntityResolver() {
                 public InputSource resolveEntity(String publicId, String systemId) throws SAXException, IOException {
                     InputSource returnInputSource = null;
-                    XmlSchema key = null;
-                    for (Iterator iter = schemaToInputSourceMap.keySet().iterator();iter.hasNext();) {
-                        key = (XmlSchema) iter.next();
+                    for (XmlSchema key : schemaToInputSourceMap.keySet()) {
                         String nsp = key.getTargetNamespace();
                         if (nsp != null && nsp.equals(publicId)) {
 
@@ -168,12 +171,10 @@ public class CodeGenerationUtility {
             };
 
 
-            Map properties = cgconfig.getProperties();
+            Map<Object,Object> properties = cgconfig.getProperties();
             String bindingFileName = (String) properties.get(BINDING_FILE_NAME);
 
-            XmlSchema key = null;
-            for (Iterator schemaIter = schemaToInputSourceMap.keySet().iterator();
-                 schemaIter.hasNext();) {
+            for (XmlSchema key : schemaToInputSourceMap.keySet()) {
 
                 SchemaCompiler sc = XJC.createSchemaCompiler();
                 if (bindingFileName != null){
@@ -187,15 +188,9 @@ public class CodeGenerationUtility {
 
                 }
 
-                key = (XmlSchema) schemaIter.next();
-
                 if (nsMap != null) {
-                    Iterator iterator = nsMap.entrySet().iterator();
-                    while(iterator.hasNext()){
-                        Map.Entry entry = (Map.Entry) iterator.next();
-                        String namespace = (String) entry.getKey();
-                        String pkg = (String)nsMap.get(namespace);
-                        registerNamespace(sc, namespace, pkg);
+                    for (Map.Entry<String,String> entry : nsMap.entrySet()) {
+                        registerNamespace(sc, entry.getKey(), entry.getValue());
                     }
                 }
 
@@ -252,12 +247,7 @@ public class CodeGenerationUtility {
                 FileCodeWriter writer = new FileCodeWriter(outputDir, cgconfig.getOutputEncoding());
                 codeModel.build(writer);
 
-                Collection mappings = jaxbModel.getMappings();
-
-                Iterator iter = mappings.iterator();
-
-                while (iter.hasNext()) {
-                    Mapping mapping = (Mapping)iter.next();
+                for (Mapping mapping : jaxbModel.getMappings()) {
                     QName qn = mapping.getElement();
                     String typeName = mapping.getType().getTypeClass().fullName();
 
@@ -267,12 +257,10 @@ public class CodeGenerationUtility {
                 //process the unwrapped parameters
                 if (!cgconfig.isParametersWrapped()) {
                     //figure out the unwrapped operations
-                    List axisServices = cgconfig.getAxisServices();
-                    for (Iterator servicesIter = axisServices.iterator(); servicesIter.hasNext();) {
-                        AxisService axisService = (AxisService)servicesIter.next();
-                        for (Iterator operations = axisService.getOperations();
+                    for (AxisService axisService : cgconfig.getAxisServices()) {
+                        for (Iterator<AxisOperation> operations = axisService.getOperations();
                              operations.hasNext();) {
-                            AxisOperation op = (AxisOperation)operations.next();
+                            AxisOperation op = operations.next();
 
                             if (WSDLUtil.isInputPresentForMEP(op.getMessageExchangePattern())) {
                                 AxisMessage message = op.getMessage(
@@ -281,10 +269,7 @@ public class CodeGenerationUtility {
                                         message.getParameter(Constants.UNWRAPPED_KEY) != null) {
 
                                     Mapping mapping = jaxbModel.get(message.getElementQName());
-                                    List elementProperties = mapping.getWrapperStyleDrilldown();
-                                    for(int j = 0; j < elementProperties.size(); j++){
-                                        Property elementProperty = (Property) elementProperties.get(j);
-
+                                    for (Property elementProperty : mapping.getWrapperStyleDrilldown()) {
                                         QName partQName =
                                                     WSDLUtil.getPartQName(op.getName().getLocalPart(),
                                                                           WSDLConstants.INPUT_PART_QNAME_SUFFIX,
@@ -316,10 +301,7 @@ public class CodeGenerationUtility {
                                         message.getParameter(Constants.UNWRAPPED_KEY) != null) {
 
                                     Mapping mapping = jaxbModel.get(message.getElementQName());
-                                    List elementProperties = mapping.getWrapperStyleDrilldown();
-                                    for(int j = 0; j < elementProperties.size(); j++){
-                                        Property elementProperty = (Property) elementProperties.get(j);
-
+                                    for (Property elementProperty : mapping.getWrapperStyleDrilldown()) {
                                         QName partQName =
                                                     WSDLUtil.getPartQName(op.getName().getLocalPart(),
                                                                           WSDLConstants.OUTPUT_PART_QNAME_SUFFIX,
@@ -385,20 +367,15 @@ public class CodeGenerationUtility {
         appInfo.appendChild(schemaBindings);
         schemaBindings.appendChild(pkgElement);
         rootElement.appendChild(annoElement);
-        File file = File.createTempFile("customized",".xsd");
-        FileOutputStream stream = new FileOutputStream(file);
-        try {
-            Result result = new StreamResult(stream);
-            Transformer xformer = TransformerFactory.newInstance().newTransformer();
-            xformer.transform(new DOMSource(rootElement), result);
-            stream.flush();
-            stream.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        InputSource ins = new InputSource(file.toURI().toString());
+        MemoryBlob blob = Blobs.createMemoryBlob();
+        OutputStream stream = blob.getOutputStream();
+        Result result = new StreamResult(stream);
+        Transformer xformer = TransformerFactory.newInstance().newTransformer();
+        xformer.transform(new DOMSource(rootElement), result);
+        stream.close();
+        InputSource ins = new InputSource(blob.getInputStream());
+        ins.setSystemId("urn:" + UUID.randomUUID());
         sc.parseSchema(ins);
-        file.delete();
     }
 
     private static String extractNamespace(XmlSchema schema) {

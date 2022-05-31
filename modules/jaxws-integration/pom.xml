@@ -19,17 +19,29 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>axis2</artifactId>
-        <version>1.8.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
+
     <artifactId>axis2-jaxws-integration</artifactId>
+
     <name>Apache Axis2 - JAXWS Integration Tests</name>
     <description>Axis2 JAXWS Integration Tests</description>
+    <url>http://axis.apache.org/axis2/java/core/</url>
+
+    <scm>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=axis-axis2-java-core.git;a=summary</url>
+        <tag>HEAD</tag>
+    </scm>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.geronimo.specs</groupId>
@@ -81,6 +93,16 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.sun.activation</groupId>
+            <artifactId>jakarta.activation</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.axis2</groupId>
             <artifactId>axis2-testutils</artifactId>
             <version>${project.version}</version>
@@ -92,17 +114,22 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-jcl</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
-    <url>http://axis.apache.org/axis2/java/core/</url>
-    <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/jaxws-integration</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/jaxws-integration</developerConnection>
-        <url>http://svn.apache.org/viewvc/axis/axis2/java/core/trunk/modules/jaxws-integration</url>
-    </scm>
+
     <build>
         <testResources>
             <testResource>
@@ -110,46 +137,12 @@
                 <includes>
                     <include>**/*.xml</include>
                     <include>**/*.wsdl</include>
+                    <include>**/*.xsd</include>
                     <include>**/*.properties</include>
                 </includes>
             </testResource>
         </testResources>
         <plugins>
-            <plugin>
-                <groupId>com.github.veithen.alta</groupId>
-                <artifactId>alta-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>generate-properties</goal>
-                        </goals>
-                        <configuration>
-                            <artifacts>
-                                <artifact>
-                                    <groupId>javax.xml.bind</groupId>
-                                    <artifactId>jaxb-api</artifactId>
-                                </artifact>
-                                <artifact>
-                                    <groupId>org.apache.geronimo.specs</groupId>
-                                    <artifactId>geronimo-jaxws_2.2_spec</artifactId>
-                                </artifact>
-                            </artifacts>
-                            <name>jaxws.bootclasspath</name>
-                            <value>%file%</value>
-                            <separator>${path.separator}</separator>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <inherited>true</inherited>
-                <configuration>
-                    <compilerArgument>
-                        -Xbootclasspath/p:${jaxws.bootclasspath}
-                    </compilerArgument>
-                </configuration>
-            </plugin>
             <plugin>
                 <groupId>org.apache.axis2</groupId>
                 <artifactId>axis2-wsdl2code-maven-plugin</artifactId>
@@ -263,97 +256,91 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>jaxb2-maven-plugin</artifactId>
+                <groupId>com.github.veithen.maven</groupId>
+                <artifactId>xjc-maven-plugin</artifactId>
                 <executions>
                     <execution>
                         <id>xjc-soap11</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>XmlSchema</sourceType>
-                            <testSources>
-                                <testSource>test-resources/xsd/soap11.xsd</testSource>
-                            </testSources>
+                            <files>
+                                <file>test-resources/xsd/soap11.xsd</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/soap11</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-echo</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>XmlSchema</sourceType>
-                            <testSources>
-                                <testSource>test-resources/xsd/echo.xsd</testSource>
-                            </testSources>
+                            <files>
+                                <file>test-resources/xsd/echo.xsd</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/echo</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-stock1</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>XmlSchema</sourceType>
-                            <testSources>
-                                <testSource>test-resources/xsd/stock1.xsd</testSource>
-                            </testSources>
+                            <files>
+                                <file>test-resources/xsd/stock1.xsd</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/stock1</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-stock2</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>XmlSchema</sourceType>
-                            <testSources>
-                                <testSource>test-resources/xsd/stock2.xsd</testSource>
-                            </testSources>
+                            <files>
+                                <file>test-resources/xsd/stock2.xsd</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/stock2</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-samplemtom</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>XmlSchema</sourceType>
-                            <testSources>
-                                <testSource>test-resources/xsd/samplemtom.xsd</testSource>
-                            </testSources>
+                            <files>
+                                <file>test-resources/xsd/samplemtom.xsd</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/samplemtom</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-greeterTypes</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>XmlSchema</sourceType>
-                            <testSources>
-                                <testSource>test-resources/xsd/greeterTypes.xsd</testSource>
-                            </testSources>
+                            <files>
+                                <file>test-resources/xsd/greeterTypes.xsd</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/greeterTypes</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-ProxyDocLitWrapped</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/ProxyDocLitWrapped.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/ProxyDocLitWrapped.wsdl</file>
+                            </files>
                             <packageName>org.test.proxy.doclitwrapped</packageName>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/ProxyDocLitWrapped</outputDirectory>
                         </configuration>
@@ -361,26 +348,26 @@
                     <execution>
                         <id>xjc-AddNumbers</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/AddNumbers.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/AddNumbers.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/AddNumbers</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-samplemtomjpeg</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/samplemtomjpeg.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/samplemtomjpeg.wsdl</file>
+                            </files>
                             <packageName>org.apache.axis2.jaxws.sample.mtom1</packageName>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/samplemtomjpeg</outputDirectory>
                         </configuration>
@@ -388,13 +375,13 @@
                     <execution>
                         <id>xjc-RPCLit</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/RPCLit.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/RPCLit.wsdl</file>
+                            </files>
                             <packageName>org.test.proxy.rpclit</packageName>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/RPCLit</outputDirectory>
                         </configuration>
@@ -402,13 +389,13 @@
                     <execution>
                         <id>xjc-RPCLitSWA</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/RPCLitSWA.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/RPCLitSWA.wsdl</file>
+                            </files>
                             <packageName>org.test.proxy.rpclitswa</packageName>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/RPCLitSWA</outputDirectory>
                         </configuration>
@@ -416,117 +403,116 @@
                     <execution>
                         <id>xjc-gorilla_dlw</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>src/test/java/org/apache/axis2/jaxws/proxy/gorilla_dlw/META-INF/gorilla_dlw.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>src/test/java/org/apache/axis2/jaxws/proxy/gorilla_dlw/META-INF/gorilla_dlw.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/gorilla_dlw</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-SOAP12Echo</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/SOAP12Echo.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/SOAP12Echo.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/SOAP12Echo</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-AddNumbersHandler</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/AddNumbersHandler.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/AddNumbersHandler.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/AddNumbersHandler</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-HeadersHandler</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/HeadersHandler.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/HeadersHandler.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/HeadersHandler</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-async_doclitwr</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/async_doclitwr.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/async_doclitwr.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/async_doclitwr</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-async_doclitwr2</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/async_doclitwr2.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/async_doclitwr2.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/async_doclitwr2</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-FaultyWebService</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/FaultyWebService.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/FaultyWebService.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/FaultyWebService</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-FaultsService</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/FaultsService.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/FaultsService.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/FaultsService</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-jaxbsource</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>XmlSchema</sourceType>
-                            <testSources>
-                                <testSource>test-resources/xsd/jaxbsource.xsd</testSource>
-                            </testSources>
+                            <files>
+                                <file>test-resources/xsd/jaxbsource.xsd</file>
+                            </files>
                             <packageName>org.test.dispatch.jaxbsource</packageName>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/jaxbsource</outputDirectory>
                         </configuration>
@@ -534,78 +520,78 @@
                     <execution>
                         <id>xjc-doclit_nonwrap</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/doclit_nonwrap.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/doclit_nonwrap.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/doclit_nonwrap</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-doclitwrap</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/doclitwrap.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/doclitwrap.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/doclitwrap</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-doclitbare</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/doclitbare.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/doclitbare.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/doclitbare</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-resourceinjection</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/resourceinjection.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/resourceinjection.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/resourceinjection</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-MessageContext</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/MessageContext.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/MessageContext.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/MessageContext</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-WSDLMultiTests</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/WSDLMultiTests.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/WSDLMultiTests.wsdl</file>
+                            </files>
                             <packageName>multi</packageName>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/WSDLMultiTests</outputDirectory>
                         </configuration>
@@ -613,129 +599,135 @@
                     <execution>
                         <id>xjc-rpclitenum</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/rpclitenum.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/rpclitenum.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/rpclitenum</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-rpclitstringarray</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/rpclitstringarray.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/rpclitstringarray.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/rpclitstringarray</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-swamtomservice</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/swamtomservice.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/swamtomservice.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/swamtomservice</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>xjc-ProcessDocumentService</id>
                         <goals>
-                            <goal>testXjc</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
-                            <sourceType>WSDL</sourceType>
-                            <testSources>
-                                <testSource>test-resources/wsdl/ProcessDocumentService.wsdl</testSource>
-                            </testSources>
+                            <schemaLanguage>WSDL</schemaLanguage>
+                            <files>
+                                <file>test-resources/wsdl/ProcessDocumentService.wsdl</file>
+                            </files>
                             <outputDirectory>${project.build.directory}/generated-test-sources/jaxb/ProcessDocumentService</outputDirectory>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>jaxws-maven-plugin</artifactId>
+                <groupId>com.github.veithen.maven</groupId>
+                <artifactId>wsimport-maven-plugin</artifactId>
                 <executions>
                     <execution>
                         <id>wsimport-SOAPActionTest</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
                                 <wsdlFile>${basedir}/src/test/repository/services/BookStoreService/META-INF/SOAPActionTest.wsdl</wsdlFile>
                             </wsdlFiles>
+                            <generateService>true</generateService>
                         </configuration>
                     </execution>
                     <execution>
                         <id>wsimport-AnyType</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
                                 <wsdlFile>${basedir}/src/test/java/org/apache/axis2/jaxws/anytype/META-INF/AnyType.wsdl</wsdlFile>
                             </wsdlFiles>
                             <packageName>org.apache.axis2.jaxws.anytype</packageName>
+                            <generateService>true</generateService>
                         </configuration>
                     </execution>
                     <execution>
                         <id>wsimport-shapes</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
                                 <wsdlFile>${basedir}/src/test/java/org/apache/axis2/jaxws/polymorphic/shape/META-INF/shapes.wsdl</wsdlFile>
                             </wsdlFiles>
+                            <generateService>true</generateService>
                         </configuration>
                     </execution>
                     <execution>
                         <id>wsimport-EchoMessage</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
                                 <wsdlFile>${basedir}/src/test/java/org/apache/axis2/jaxws/nonanonymous/complextype/META-INF/EchoMessage.wsdl</wsdlFile>
                             </wsdlFiles>
                             <packageName>org.apache.axis2.jaxws.nonanonymous.complextype</packageName>
+                            <generateService>true</generateService>
                         </configuration>
                     </execution>
                     <execution>
                         <id>wsimport-proxy_doclit_unwr</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
                                 <wsdlFile>${basedir}/src/test/java/org/apache/axis2/jaxws/proxy/doclitnonwrapped/META-INF/proxy_doclit_unwr.wsdl</wsdlFile>
                             </wsdlFiles>
                             <packageName>org.apache.axis2.jaxws.proxy.doclitnonwrapped</packageName>
+                            <generateService>true</generateService>
                         </configuration>
                     </execution>
                     <execution>
                         <id>wsimport-ProxyDocLitWrapped</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
                                 <wsdlFile>${basedir}/src/test/java/org/apache/axis2/jaxws/proxy/doclitwrapped/META-INF/ProxyDocLitWrapped.wsdl</wsdlFile>
                             </wsdlFiles>
                             <packageName>org.apache.axis2.jaxws.proxy.doclitwrapped</packageName>
+                            <generateService>true</generateService>
                         </configuration>
                     </execution>
                 </executions>
@@ -748,7 +740,7 @@
                         <id>build-repo</id>
                         <phase>test-compile</phase>
                         <configuration>
-                            <tasks unless="maven.test.skip">
+                            <target unless="maven.test.skip">
                                 <property name="repo.dir" value="${project.build.directory}/repo" />
                                 <property name="services.dir" value="${repo.dir}/services" />
                                 <property name="servicejars.dir" value="${repo.dir}/servicejars" />
@@ -1364,7 +1356,7 @@
                                         <include name="**/axis2.xml" />
                                     </fileset>
                                 </copy>
-                            </tasks>
+                            </target>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -1376,7 +1368,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <inherited>true</inherited>
                 <configuration>
-                    <argLine>-Xms256m -Xmx512m -Xbootclasspath/p:${jaxws.bootclasspath}</argLine>
+                    <argLine>${argLine} -Xms256m -Xmx512m --add-opens java.desktop/java.awt=ALL-UNNAMED --add-opens java.xml/javax.xml.namespace=ALL-UNNAMED</argLine>
                     <!-- Enable the next 2 lines if you want to attach a debugger
                     <argLine>-Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5006</argLine>-->
                     <includes>

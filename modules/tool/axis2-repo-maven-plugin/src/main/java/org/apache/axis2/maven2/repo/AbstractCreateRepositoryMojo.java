@@ -61,14 +61,14 @@ import org.codehaus.plexus.util.StringUtils;
 
 public abstract class AbstractCreateRepositoryMojo extends AbstractMojo {
     /**
-     * @parameter expression="${project.artifacts}"
+     * @parameter property="project.artifacts"
      * @readonly
      * @required
      */
     private Set<Artifact> projectArtifacts;
     
     /**
-     * @parameter expression="${project.collectedProjects}"
+     * @parameter property="project.collectedProjects"
      * @required
      * @readonly
      */
@@ -479,6 +479,14 @@ public abstract class AbstractCreateRepositoryMojo extends AbstractMojo {
                         if (generatedAxis2xml.getModules() != null) {
                             for (String module : generatedAxis2xml.getModules()) {
                                 axis2xmlDoc.getOMFactory().createOMElement("module", null, root).addAttribute("ref", module, null);
+                            }
+                        }
+                        if (generatedAxis2xml.getDeployers() != null) {
+                            for (Deployer deployer : generatedAxis2xml.getDeployers()) {
+                                OMElement deployerElement = axis2xmlDoc.getOMFactory().createOMElement("deployer", null, root);
+                                deployerElement.addAttribute("extension", deployer.getExtension(), null);
+                                deployerElement.addAttribute("directory", deployer.getDirectory(), null);
+                                deployerElement.addAttribute("class", deployer.getClassName(), null);
                             }
                         }
                         OutputStream out = new FileOutputStream(axis2xmlFile);

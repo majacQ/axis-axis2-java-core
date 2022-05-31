@@ -27,7 +27,7 @@ import org.apache.axis2.AxisFault;
 import org.apache.axis2.Constants;
 import org.apache.axis2.builder.Builder;
 import org.apache.axis2.context.MessageContext;
-import org.apache.axis2.json.gson.factory.JsonConstant;
+import org.apache.axis2.json.factory.JsonConstant;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -55,6 +55,7 @@ public class JsonBuilder implements Builder {
                 log.debug("Inputstream is null, This is possible with GET request");
             }
         }
+        log.debug("JsonBuilder.processDocument() has completed, returning default envelope");
         // dummy envelop
         SOAPFactory soapFactory = OMAbstractFactory.getSOAP11Factory();
         return soapFactory.getDefaultEnvelope();

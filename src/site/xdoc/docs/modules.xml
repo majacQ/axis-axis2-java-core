@@ -102,7 +102,7 @@ align="bottom" border="0" id="Graphic5" /></p>
 <h4>Step1 : LoggingModule Class</h4>
 <p>LoggingModule is the implementation class of the Axis2 module.
 Axis2 modules should implement the "<a href=
-"http://svn.apache.org/viewcvs.cgi/webservices/axis2/trunk/java/modules/core/src/org/apache/axis2/modules/Module.java?rev=396785&amp;view=log">org.apache.axis2.modules.Module</a>"
+"https://github.com/apache/axis-axis2-java-core/blob/master/modules/kernel/src/org/apache/axis2/modules/Module.java">org.apache.axis2.modules.Module</a>"
 interface with the following methods.</p>
 <pre>
 public void init(ConfigurationContext configContext, AxisModule module) throws AxisFault;//Initialize the module
@@ -125,9 +125,9 @@ various SOAP header processing at different phases. (See the
 <a href="Axis2ArchitectureGuide.html#incomingsoap"
 >Architecture Guide</a> for more information on phases). To
 write a handler one should implement <a href=
-"http://svn.apache.org/viewcvs.cgi/webservices/axis2/trunk/java/modules/core/src/org/apache/axis2/engine/Handler.java?rev=357187&amp;view=log">
+"https://github.com/apache/axis-axis2-java-core/blob/master/modules/kernel/src/org/apache/axis2/engine/Handler.java">
 org.apache.axis2.engine.Handler</a>. But for convenience, <a href=
-"http://svn.apache.org/viewcvs.cgi/webservices/axis2/trunk/java/modules/core/src/org/apache/axis2/handlers/AbstractHandler.java?rev=396788&amp;view=log">
+"https://github.com/apache/axis-axis2-java-core/blob/master/modules/kernel/src/org/apache/axis2/handlers/AbstractHandler.java">
 org.apache.axis2.handlers.AbstractHandler</a> provides an abstract
 implementation of the Handler interface.</p>
 <p>For the logging module, we will write a handler with the
@@ -376,11 +376,6 @@ Codegeneration</a>', and copy the "logging.mar" file to the
 "modules" directory.</p>
 <p>Then run 'ant run.client.servicewithmodule' from
 <strong>axis2home/samples/userguide directory</strong></p>
-<p>Note: To see the logs, the user needs to modify the
-"log4j.properties" to log INFO. The property file is located in
-"<strong>webapps/axis2/WEB-INF/classes</strong>" of your servlet
-container. Change the line "log4j.rootCategory= ERROR, LOGFILE" to
-"log4j.rootCategory=INFO, ERROR, LOGFILE".</p>
 <p><font size="2"><b>Note (on samples):</b></font> All the samples
 mentioned in the user's guide are located at the
 <b>"samples\userguide\src"</b> directory of the binary

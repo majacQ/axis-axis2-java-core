@@ -17,24 +17,29 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>axis2</artifactId>
-        <version>1.8.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>axis2-adb-tests</artifactId>
+
     <name>Apache Axis2 - ADB Tests</name>
     <description>ADB Tests</description>
     <url>http://axis.apache.org/axis2/java/core/</url>
+
     <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/adb-tests</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/adb-tests</developerConnection>
-        <url>http://svn.apache.org/viewvc/axis/axis2/java/core/trunk/modules/adb-tests</url>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=axis-axis2-java-core.git;a=summary</url>
+        <tag>HEAD</tag>
     </scm>
+
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -54,8 +59,13 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>xmlunit</groupId>
-            <artifactId>xmlunit</artifactId>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.xmlunit</groupId>
+            <artifactId>xmlunit-legacy</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -430,13 +440,13 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>jaxws-maven-plugin</artifactId>
+                <groupId>com.github.veithen.maven</groupId>
+                <artifactId>wsimport-maven-plugin</artifactId>
                 <executions>
                     <execution>
                         <id>wsimport-mtom</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
@@ -448,31 +458,33 @@
                     <execution>
                         <id>wsimport-axis2-5741</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
                                 <wsdlFile>${basedir}/src/test/wsdl/AXIS2-5741.wsdl</wsdlFile>
                             </wsdlFiles>
                             <packageName>org.apache.axis2.databinding.axis2_5741.client</packageName>
+                            <generateService>true</generateService>
                         </configuration>
                     </execution>
                     <execution>
                         <id>wsimport-axis2-5749</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
                                 <wsdlFile>${basedir}/src/test/wsdl/AXIS2-5749.wsdl</wsdlFile>
                             </wsdlFiles>
                             <packageName>org.apache.axis2.databinding.axis2_5749.client</packageName>
+                            <generateService>true</generateService>
                         </configuration>
                     </execution>
                     <execution>
                         <id>wsimport-axis2-5750</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
@@ -484,7 +496,7 @@
                     <execution>
                         <id>wsimport-axis2-5758</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
@@ -496,7 +508,7 @@
                     <execution>
                         <id>wsimport-axis2-5799</id>
                         <goals>
-                            <goal>wsimport-test</goal>
+                            <goal>generate-test-sources</goal>
                         </goals>
                         <configuration>
                             <wsdlFiles>
@@ -506,13 +518,6 @@
                         </configuration>
                     </execution>
                 </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>com.sun.xml.ws</groupId>
-                        <artifactId>jaxws-tools</artifactId>
-                        <version>${jaxws.tools.version}</version>
-                    </dependency>
-                </dependencies>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

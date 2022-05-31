@@ -19,25 +19,31 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>axis2</artifactId>
-        <version>1.8.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
         <relativePath>../../../pom.xml</relativePath>
     </parent>
+
     <artifactId>axis2-idea-plugin</artifactId>
+
     <name>Apache Axis2 - tool - Intellij IDEA Plugin</name>
     <description>
         A Intellij IDEA plugin for Service Archive creation and Code Generation
     </description>
     <url>http://axis.apache.org/axis2/java/core/</url>
+
     <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/tool/axis2-idea-plugin</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/tool/axis2-idea-plugin</developerConnection>
-        <url>http://svn.apache.org/viewvc/axis/axis2/java/core/trunk/modules/tool/axis2-idea-plugin</url>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=axis-axis2-java-core.git;a=summary</url>
+        <tag>HEAD</tag>
     </scm>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.maven</groupId>
@@ -86,7 +92,7 @@
         </dependency>
         <dependency>
             <groupId>com.sun.mail</groupId>
-            <artifactId>javax.mail</artifactId>
+            <artifactId>jakarta.mail</artifactId>
         </dependency>
         <dependency>
             <groupId>com.intellij</groupId>
@@ -117,8 +123,12 @@
             <artifactId>woden-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
         </dependency>
     </dependencies>
 
@@ -129,7 +139,6 @@
                 <directory>plugin</directory>
             </resource>
         </resources>
-
         <plugins>
             <plugin>
                 <artifactId>maven-remote-resources-plugin</artifactId>
@@ -163,7 +172,7 @@
                         <id>distribution-package</id>
                         <phase>package</phase>
                         <goals>
-                            <goal>attached</goal>
+                            <goal>single</goal>
                         </goals>
                         <configuration>
                             <descriptors>
@@ -182,6 +191,7 @@
             </plugin>
         </plugins>
     </build>
+
     <profiles>
         <profile>
             <id>apache-release</id>

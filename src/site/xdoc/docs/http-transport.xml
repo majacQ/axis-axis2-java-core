@@ -35,9 +35,10 @@ as the transport mechanism.</p>
 
 <h2>Contents</h2>
 <ul>
-  <li><a href="#CommonsHTTPTransportSender">CommonsHTTPTransportSender</a>
+  <li><a href="#HTTPClient4TransportSender">HTTPClient4TransportSender</a>
     <ul>
       <li><a href="#httpsupport">HTTPS support</a></li>
+      <li><a href="#further">Further customization</a></li>
     </ul>
   </li>
   <li><a href="#timeout_config">Timeout Configuration</a></li>
@@ -47,26 +48,26 @@ as the transport mechanism.</p>
   <li><a href="#reusing_httpclient_object">Reusing the httpclient object</a></li>
   <li><a href="#setting_cached_httpclient_object">Setting the cached httpclient object</a></li>
 </ul>
-<a name="CommonsHTTPTransportSender"></a>
+<a name="HTTPClient4TransportSender"></a>
 
-<h2>CommonsHTTPTransportSender</h2>
+<h2>HTTPClient4TransportSender</h2>
 
-<p>CommonsHTTPTransportSender is the transport sender that is used by default in both
+<p>HTTPClient4TransportSender is the transport sender that is used by default in both
 the Server and Client APIs. As its name implies, it is based on <a
-        xmlns="http://www.w3.org/1999/xhtml" xml:space="preserve" href="http://hc.apache.org/httpclient-3.x/">commons-httpclient-3.1</a>.
+        xmlns="http://www.w3.org/1999/xhtml" xml:space="preserve" href="http://hc.apache.org/">Apache HttpComponents</a>.
 For maximum flexibility, this sender supports both the HTTP GET and POST interfaces.
 (REST in Axis2 also supports both interfaces.)</p>
 
 <p>Axis2 uses a single HTTPClient instance per ConfigurationContext (which usually means per instance
 of ServiceClient).  This pattern allows for HTTP 1.1 to automatically reuse TCP connections - in earlier versions of Axis2 the REUSE_HTTP_CLIENT configuration property was necessary to enable this functionality, but as of 1.5 this is no longer necessary.</p>
 
-<p>Commons HttpClient also provides HTTP 1.1, Chunking and KeepAlive support for Axis2.</p>
+<p>Apache HttpComponents also provides HTTP 1.1, Chunking and KeepAlive support for Axis2.</p>
 
 
 <p>The &lt;transportSender/&gt; element defines transport senders in
 the axis2.xml configuration file as follows:</p>
 <pre>
-&lt;transportSender name="http" class="org.apache.axis2.transport.http.CommonsHTTPTransportSender"&gt;
+&lt;transportSender name="http" class="org.apache.axis2.transport.http.impl.httpclient4.HTTPClient4TransportSender"&gt;
    &lt;parameter name="PROTOCOL"&gt;HTTP/1.1&lt;/parameter&gt;
    &lt;parameter name="Transfer-Encoding"&gt;chunked&lt;/parameter&gt;
 &lt;/transportSender&gt;
@@ -94,10 +95,10 @@ encoding style (UTF-8, UTF-16, etc.) is provided via MessageContext.</p>
 <a name="httpsupport"></a>
 
 <h3>HTTPS support</h3>
-CommonsHTTPTransportSender can be also used to communicate over https.
+HTTPClient4TransportSender can be also used to communicate over https.
 
 <pre>
-   &lt;transportSender name="<b>https</b>" class="org.apache.axis2.transport.http.CommonsHTTPTransportSender"&gt;
+   &lt;transportSender name="<b>https</b>" class="org.apache.axis2.transport.http.impl.httpclient4.HTTPClient4TransportSender"&gt;
       &lt;parameter name="PROTOCOL"&gt;HTTP/1.1&lt;/parameter&gt;
       &lt;parameter name="Transfer-Encoding"&gt;chunked&lt;/parameter&gt;
    &lt;/transportSender&gt;
@@ -105,15 +106,85 @@ CommonsHTTPTransportSender can be also used to communicate over https.
 
 <p>Please note that by default HTTPS works only when the server does not
 expect to authenticate the clients (1-way SSL only) and where the
-server has the clients' public keys in its trust store.
+server has the clients' public keys in its trust store.  </p>
 
-If you want to perform SSL client authentication (2-way SSL), you may
-use the Protocol.registerProtocol feature of HttpClient. You can
-overwrite the "https" protocol, or use a different protocol for your
-SSL client authentication communications if you don't want to mess
-with regular https. Find more information at
-<a href="http://jakarta.apache.org/commons/httpclient/sslguide.html">http://jakarta.apache.org/commons/httpclient/sslguide.html</a></p>
-<a name="timeout_config"></a>
+<p>If you want to perform SSL client authentication (2-way SSL), you may
+configure your own HttpClient class and customize it as desired - see the
+example below.  </p>
+
+<p>To control the max connections per host attempted in parallel by a
+reused httpclient, or any other advanced parameters, you need to
+set the cached httpclient object when your application starts up
+(before any actual axis request). You can set the relevant property
+as shown below by using HTTPConstants.CACHED_HTTP_CLIENT.  </p>
+
+<p>The following code was testing Axis2 on Wildfly 20, the cert was obtained by
+'openssl s_client -connect myserver:8443 -showcerts' </p>
+
+<pre>
+        String wildflyserver_cert_path = "src/wildflyserver.crt";
+        Certificate certificate = CertificateFactory.getInstance("X.509").generateCertificate(new FileInputStream(new File(wildflyserver_cert_path)));
+        KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        keyStore.load(null, null);
+        keyStore.setCertificateEntry("server", certificate);
+
+        TrustManagerFactory trustManagerFactory = null;
+        trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init(keyStore);
+        TrustManager[] trustManagers = trustManagerFactory.getTrustManagers();
+        if (trustManagers.length != 1 || !(trustManagers[0] instanceof X509TrustManager)) {
+            throw new Exception("Unexpected default trust managers:" + Arrays.toString(trustManagers));
+        }
+
+        SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+        sslContext.init(null, trustManagers, new SecureRandom());
+
+	// NoopHostnameVerifier to trust self-singed cert
+        SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
+
+        Registry&lt;ConnectionSocketFactory&gt; socketFactoryRegistry = RegistryBuilder.&lt;ConnectionSocketFactory&gt;create().register("https", sslsf).build();
+
+	// This code is taken from HTTPSenderImpl, from 200 connections to 20
+        HttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+        ((PoolingHttpClientConnectionManager)connManager).setMaxTotal(20);
+        ((PoolingHttpClientConnectionManager)connManager).setDefaultMaxPerRoute(20);
+
+        HttpClient httpClient = HttpClientBuilder.create().setConnectionManager(connManager).setConnectionManagerShared(true).build();
+	Options options = new Options();
+        options.setTo("myurl");
+        options.setTransportInProtocol(Constants.TRANSPORT_HTTP);
+        options.setTimeOutInMilliSeconds(120000);
+        options.setProperty(HTTPConstants.CACHED_HTTP_CLIENT, httpClient);
+        ServiceClient sender = new ServiceClient();
+        sender.setOptions(options);
+
+</pre>
+
+<a name="further"></a>
+<h2>Further customization</h2>
+
+<p>
+References to the core HTTP classes used by Axis2 Stub classes can be obtained below.
+</p>
+
+<pre>
+TransportOutDescription transportOut = new TransportOutDescription("https");
+HTTPClient4TransportSender sender = new HTTPClient4TransportSender();
+sender.init(stub._getServiceClient().getServiceContext().getConfigurationContext(), transportOut);
+transportOut.setSender(sender);
+options.setTransportOut(transportOut);
+</pre>
+
+<h2>Async Thread Pool</h2>
+
+<p>
+For Async requests, the axis2 thread pool core size is set to 5. That can 
+be changed as shown below.
+</p>
+
+<pre>
+configurationContext.setThreadPool(new ThreadPool(200, Integer.MAX_VALUE));
+</pre>
 
 <h2>Timeout Configuration</h2>
 
@@ -162,13 +233,13 @@ options.setProperty(org.apache.axis2.context.MessageContextConstants.HTTP_PROTOC
 
 <h2>Proxy Authentication</h2>
 
-<p>The Commons-http client has built-in support for proxy
+<p>The Apache Httpcomponents client has built-in support for proxy
 authentication. Axis2 uses deployment time and runtime mechanisms to
 authenticate proxies. At deployment time, the user has to change the
 axis2.xml as follows. This authentication is available for both HTTP and
 HTTPS.</p>
 <pre>
-&lt;transportSender name="<b>http</b>" class="org.apache.axis2.transport.http.CommonsHTTPTransportSender"&gt;
+&lt;transportSender name="<b>http</b>" class="org.apache.axis2.transport.http.impl.httpclient4.HTTPClient4TransportSender"&gt;
    &lt;parameter name="PROTOCOL"&gt;HTTP/1.1&lt;/parameter&gt;
    &lt;parameter name="PROXY" proxy_host="proxy_host_name" proxy_port="proxy_host_port"&gt;userName:domain:passWord&lt;/parameter&gt;
 &lt;/transportSender&gt;</pre>
@@ -295,17 +366,8 @@ object, you can set the relevant property in the Stub:
     <a name="setting_cached_httpclient_object"></a>
 <h2>Setting the cached httpclient object</h2>
 
-To control the max connections per host attempted in parallel by a
-reused httpclient (this can be worthwhile as the default value is 2
-connections per host), or any other advanced parameters, you need to
-set the cached httpclient object when your application starts up
-(before any actual axis request). You can set the relevant property in
-the Stub:
-
+    See the SSL example for a definition of the HTTPClient Object.
     <pre>
-MultiThreadedHttpConnectionManager conmgr = new MultiThreadedHttpConnectionManager();
-conmgr.getParams().setDefaultMaxConnectionsPerHost(10);
-HttpClient client = new HttpClient(conmgr);
 configurationContext.setProperty(HTTPConstants.CACHED_HTTP_CLIENT, client);
 </pre>
 

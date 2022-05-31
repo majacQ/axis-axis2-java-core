@@ -19,17 +19,29 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>axis2</artifactId>
-        <version>1.8.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
+
     <artifactId>axis2-adb-codegen</artifactId>
+
     <name>Apache Axis2 - ADB Codegen</name>
     <description>ADB code generation support for Axis2</description>
+    <url>http://axis.apache.org/axis2/java/core/</url>
+
+    <scm>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=axis-axis2-java-core.git;a=summary</url>
+        <tag>HEAD</tag>
+    </scm>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.axis2</groupId>
@@ -60,17 +72,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>xmlunit</groupId>
-            <artifactId>xmlunit</artifactId>
+            <groupId>org.xmlunit</groupId>
+            <artifactId>xmlunit-legacy</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
-    <url>http://axis.apache.org/axis2/java/core/</url>
-    <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/adb-codegen</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/adb-codegen</developerConnection>
-        <url>http://svn.apache.org/viewvc/axis/axis2/java/core/trunk/modules/adb-codegen</url>
-    </scm>
+
     <build>
         <sourceDirectory>src</sourceDirectory>
         <testSourceDirectory>test</testSourceDirectory>
@@ -122,7 +129,7 @@
                         <id>process-resources</id>
                         <phase>process-resources</phase>
                         <configuration>
-                            <tasks>
+                            <target>
                                 <tstamp>
                                     <format property="build.time" pattern="MMM dd, yyyy (hh:mm:ss z)" locale="en" />
                                 </tstamp>
@@ -133,7 +140,7 @@
                                         <filter token="today" value=" Built on : ${build.time}" />
                                     </filterset>
                                 </copy>
-                            </tasks>
+                            </target>
                         </configuration>
                         <goals>
                             <goal>run</goal>

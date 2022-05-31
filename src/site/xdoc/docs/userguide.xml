@@ -35,8 +35,10 @@ Apache Axis2. It also covers some advanced topics, such as how to
 use Axis2 to create and deploy Web services as well as how to use
 WSDL to generate both clients and services.</p>
 For experienced users of Apache Axis2, we recommend the <a href=
-"adv-userguide.html">Advanced User's Guide.</a> <a name="intro" id=
-"intro"></a>
+"adv-userguide.html">Advanced User's Guide.</a> 
+For users of JSON and Spring Boot, see the sample application in the <a href=
+"json-springboot-userguide.html">JSON and Spring Boot User's Guide.</a> 
+<a name="intro" id= "intro"></a>
 <h1>Introducing Axis2</h1>
 <p>This section introduces Axis2 and its structure, including an
 explanation of various directories/files included in the latest
@@ -52,6 +54,8 @@ Axis2?</strong></a></li>
 hood?</strong></a></li>
 <li><a href="userguide.html#handlessoap"><strong>How Axis2 handles
 SOAP messages</strong></a></li>
+<li><a href="userguide.html#handlesjson">How Axis2 handles JSON
+messages</a></li>
 <li><a href="userguide.html#distributions"><strong>Axis2
 Distributions</strong></a></li>
 <li><a href="userguide.html#sbd"><strong>The Axis2 Standard Binary
@@ -121,6 +125,7 @@ recommendations.</p>
 <ul>
 <li>Send SOAP messages</li>
 <li>Receive and process SOAP messages</li>
+<li>Receive and process JSON messages</li>
 <li>Create a Web service out of a plain Java class</li>
 <li>Create implementation classes for both the server and client
 using WSDL</li>
@@ -200,6 +205,20 @@ and handlers.</p>
 Axis2 system. These modules, such as Rampart, which provides an
 implementation of WS-Security, are the main extensibility
 mechanisms in Axis2.</p>
+<a name="handlesjson" id="handlesjson"></a>
+<h2>How Axis2 Handles JSON Messages</h2>
+<p>Axis2 with REST provides GSON or the newer Moshi library as the JSON parser.
+With the proper axis2.xml configuration, this support is triggered by the HTTP header 
+"Content-Type: application/json". </p>
+<p>More docs concerning Axis2 and JSON can be found in the <a href="
+json_support_gson.html">Pure JSON Support</a> and <a href="
+json_gson_user_guide.html">JSON User Guide.</a>
+</p>	
+<p>
+For users of JSON and Spring Boot - or anyone interesed in a complete JSON example that 
+includes Spring Security - see the sample application in the <a href=
+"json-springboot-userguide.html">JSON and Spring Boot User's Guide.</a> 
+</p>
 <a name="distributions" id="distributions"></a>
 <h2>Axis2 Distributions</h2>
 <p>Axis2 is released in several <a href="../download.cgi">
@@ -305,7 +324,7 @@ WEB-INF directory represents the actual Axis2 application,
 including all the *.jar files, any included modules, and even the
 deployed services themselves.</p>
 <p>The classes directory holds any class or property files that are
-needed by Axis2 itself, such as log4j.properties. Any actual
+needed by Axis2 itself, such as log4j2.xml. Any actual
 services to be handled by the system reside in the services
 directory in the form of an axis archive, or *.aar file. This file
 contains any classes related to the service, as well as the

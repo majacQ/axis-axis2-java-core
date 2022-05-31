@@ -19,17 +19,29 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>axis2</artifactId>
-        <version>1.8.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
+
     <artifactId>axis2-integration</artifactId>
+
     <name>Apache Axis2 - Integration</name>
     <description>Axis2 Integration</description>
+    <url>http://axis.apache.org/axis2/java/core/</url>
+
+    <scm>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=axis-axis2-java-core.git;a=summary</url>
+        <tag>HEAD</tag>
+    </scm>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.axis2</groupId>
@@ -98,13 +110,13 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>xmlunit</groupId>
-            <artifactId>xmlunit</artifactId>
+            <groupId>org.xmlunit</groupId>
+            <artifactId>xmlunit-legacy</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.google.truth</groupId>
-            <artifactId>truth</artifactId>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -114,13 +126,25 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.activation</groupId>
+            <artifactId>jakarta.activation</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>commons-httpclient</groupId>
-            <artifactId>commons-httpclient</artifactId>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -152,12 +176,7 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    <url>http://axis.apache.org/axis2/java/core/</url>
-    <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/integration</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/integration</developerConnection>
-        <url>http://svn.apache.org/viewvc/axis/axis2/java/core/trunk/modules/integration</url>
-    </scm>
+
     <build>
         <sourceDirectory>src</sourceDirectory>
         <testSourceDirectory>test</testSourceDirectory>
@@ -312,14 +331,14 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>commons-http-enabled</id>
+                        <id>httpcomponents-enabled</id>
                         <phase>generate-test-sources</phase>
                         <goals>
                             <goal>create-test-repository</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>target/test-resources/commons-http-enabledRepository</outputDirectory>
-                            <axis2xml>test/org/apache/axis2/engine/commons-http-enabled-axis2.xml</axis2xml>
+                            <outputDirectory>target/test-resources/httpcomponents-enabledRepository</outputDirectory>
+                            <axis2xml>test/org/apache/axis2/engine/httpcomponents-enabled-axis2.xml</axis2xml>
                             <includeModules>false</includeModules>
                         </configuration>
                     </execution>
@@ -472,7 +491,7 @@
                         <id>gen-ts</id>
                         <phase>generate-test-sources</phase>
                         <configuration>
-                            <tasks unless="maven.test.skip">
+                            <target unless="maven.test.skip">
                                 <condition property="test.skip">
                                     <equals arg1="true" arg2="${maven.test.skip}" />
                                 </condition>
@@ -481,7 +500,7 @@
                                 <property name="maven.class.path" refid="maven.runtime.classpath" />
                                 <property name="maven.test.path" refid="maven.compile.classpath" />
                                 <ant antfile="itest-build.xml" inheritall="true" inheritrefs="true" dir="." target="generate-test-sources" />
-                            </tasks>
+                            </target>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -491,7 +510,7 @@
                         <id>build-repo</id>
                         <phase>test-compile</phase>
                         <configuration>
-                            <tasks unless="maven.test.skip">
+                            <target unless="maven.test.skip">
                                 <condition property="test.skip">
                                     <equals arg1="true" arg2="${maven.test.skip}" />
                                 </condition>
@@ -506,7 +525,7 @@
                                     <path refid="maven.runtime.classpath" />
                                 </path>
                                 <ant antfile="itest-build.xml" inheritall="true" inheritrefs="true" dir="." target="build-repos" />
-                            </tasks>
+                            </target>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -538,7 +557,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <inherited>true</inherited>
                 <configuration>
-                    <argLine>-Xms256m -Xmx512m</argLine>
+                    <argLine>${argLine} -Xms256m -Xmx512m</argLine>
                     <!-- Enable the next 2 lines if you want to attach a debugger
                  <argLine>-Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5006</argLine>-->
                     <includes>

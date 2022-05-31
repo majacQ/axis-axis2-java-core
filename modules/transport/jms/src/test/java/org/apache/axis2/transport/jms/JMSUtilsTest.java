@@ -18,7 +18,7 @@
  */
 package org.apache.axis2.transport.jms;
 
-import static com.google.common.truth.Truth.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 

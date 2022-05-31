@@ -19,17 +19,33 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.axis2</groupId>
         <artifactId>axis2</artifactId>
-        <version>1.8.0-SNAPSHOT</version>
+        <version>1.8.1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
+
     <artifactId>axis2-json</artifactId>
+
     <name>Apache Axis2 - JSON</name>
     <description>Axis2 JSON module</description>
+    <url>http://axis.apache.org/axis2/java/core/</url>
+
+    <scm>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/axis-axis2-java-core.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=axis-axis2-java-core.git;a=summary</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <properties>
+        <moshi.version>1.13.0</moshi.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.axis2</groupId>
@@ -39,6 +55,7 @@
         <dependency>
             <groupId>org.codehaus.jettison</groupId>
             <artifactId>jettison</artifactId>
+            <version>1.4.1</version>
         </dependency>
          <dependency>
             <groupId>org.apache.axis2</groupId>
@@ -47,8 +64,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>xmlunit</groupId>
-            <artifactId>xmlunit</artifactId>
+            <groupId>org.xmlunit</groupId>
+            <artifactId>xmlunit-legacy</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -63,22 +80,38 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.owasp.encoder</groupId>
+            <artifactId>encoder</artifactId>
+            <version>1.2.3</version>
+        </dependency>
+        <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.moshi</groupId>
+            <artifactId>moshi</artifactId>
+            <version>${moshi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.moshi</groupId>
+            <artifactId>moshi-adapters</artifactId>
+            <version>${moshi.version}</version>
         </dependency>
         <dependency>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <version>3.0.2</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.axis2</groupId>
             <artifactId>axis2-adb-codegen</artifactId>
             <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>commons-httpclient</groupId>
-            <artifactId>commons-httpclient</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -87,12 +120,7 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    <url>http://axis.apache.org/axis2/java/core/</url>
-    <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/json</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/axis/axis2/java/core/trunk/modules/json</developerConnection>
-        <url>http://svn.apache.org/viewvc/axis/axis2/java/core/trunk/modules/json</url>
-    </scm>
+
     <build>
         <sourceDirectory>src</sourceDirectory>
         <testSourceDirectory>test</testSourceDirectory>
@@ -127,13 +155,13 @@
                             <goal>run</goal>
                         </goals>
                         <configuration>
-                            <tasks unless="maven.test.skip">
+                            <target unless="maven.test.skip">
                                 <java classname="org.apache.axis2.wsdl.WSDL2Java" fork="true">
                                     <classpath refid="maven.test.classpath" />
                                     <arg line="-ss -sd -u -or -o '${project.build.directory}/gen' -uri test-wsdl/LibraryService.wsdl" />
                                 </java>
                                 <delete file="${project.build.directory}/gen/src/org/apache/axis2/json/adb/LibraryServiceSkeleton.java" />
-                            </tasks>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>
@@ -234,6 +262,49 @@
                                         <phase>Transport</phase>
                                         <name>JSONMessageHandler</name>
                                         <className>org.apache.axis2.json.gson.JSONMessageHandler</className>
+                                    </handler>
+                                </handlers>
+                            </generatedAxis2xml>
+                            <serviceDescriptions>
+                                <serviceDescription>
+                                    <directory>${project.build.directory}/gen/resources</directory>
+                                </serviceDescription>
+                            </serviceDescriptions>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>moshi-repo</id>
+                        <goals>
+                            <goal>create-test-repository</goal>
+                        </goals>
+                        <configuration>
+                            <inputDirectory>test-repository/moshi</inputDirectory>
+                            <outputDirectory>${project.build.directory}/repo/moshi</outputDirectory>
+                            <generatedAxis2xml>
+                                <messageFormatters>
+                                    <messageFormatter>
+                                        <contentType>application/json</contentType>
+                                        <className>org.apache.axis2.json.moshi.JsonFormatter</className>
+                                    </messageFormatter>
+                                </messageFormatters>
+                                <messageBuilders>
+                                    <messageBuilder>
+                                        <contentType>application/json</contentType>
+                                        <className>org.apache.axis2.json.moshi.JsonBuilder</className>
+                                    </messageBuilder>
+                                </messageBuilders>
+                                <handlers>
+                                    <handler>
+                                        <flow>InFlow</flow>
+                                        <phase>Transport</phase>
+                                        <name>RequestURIOperationDispatcher</name>
+                                        <className>org.apache.axis2.dispatchers.RequestURIOperationDispatcher</className>
+                                    </handler>
+                                    <handler>
+                                        <flow>InFlow</flow>
+                                        <phase>Transport</phase>
+                                        <name>JSONMessageHandler</name>
+                                        <className>org.apache.axis2.json.moshi.JSONMessageHandler</className>
                                     </handler>
                                 </handlers>
                             </generatedAxis2xml>

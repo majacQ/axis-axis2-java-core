@@ -24,7 +24,7 @@ import org.apache.axis2.AxisFault;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.description.AxisOperation;
 import org.apache.axis2.json.gson.GsonXMLStreamReader;
-import org.apache.axis2.json.gson.factory.JsonConstant;
+import org.apache.axis2.json.factory.JsonConstant;
 import org.apache.axis2.rpc.receivers.RPCInOnlyMessageReceiver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -57,6 +57,7 @@ public class JsonInOnlyRPCMessageReceiver extends RPCInOnlyMessageReceiver {
                 Object serviceObj = getTheImplementationObject(inMessage);
                 AxisOperation op = inMessage.getOperationContext().getAxisOperation();
                 String operation = op.getName().getLocalPart();
+                log.debug("JsonInOnlyRPCMessageReceiver.invokeBusinessLogic() executing invokeService() with operation: " + operation);
                 invokeService(jsonReader, serviceObj, operation);
             } else {
                 throw new AxisFault("GsonXMLStreamReader should have put as a property of messageContext " +

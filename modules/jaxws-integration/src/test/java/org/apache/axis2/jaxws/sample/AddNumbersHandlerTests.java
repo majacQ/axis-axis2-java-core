@@ -19,6 +19,7 @@
 
 package org.apache.axis2.jaxws.sample;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.axis2.jaxws.framework.TestUtils.await;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -36,6 +37,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -73,6 +75,7 @@ import org.apache.axis2.jaxws.sample.addnumbershandler.AddNumbersClientProtocolH
 import org.apache.axis2.jaxws.sample.addnumbershandler.AddNumbersHandlerFault_Exception;
 import org.apache.axis2.jaxws.sample.addnumbershandler.AddNumbersHandlerPortType;
 import org.apache.axis2.jaxws.sample.addnumbershandler.AddNumbersHandlerService;
+import org.apache.axis2.jaxws.sample.addnumbershandler.AddNumbersProtocolHandler;
 import org.apache.axis2.jaxws.sample.addnumbershandler.AddNumbersProtocolHandler2;
 import org.apache.axis2.jaxws.spi.ServiceDelegate;
 import org.apache.axis2.testutils.Axis2Server;
@@ -85,7 +88,7 @@ public class AddNumbersHandlerTests {
     @ClassRule
     public static final Axis2Server server = new Axis2Server("target/repo");
     
-    String invalidAxisEndpoint = "http://invalidHostName:6060/axis2/services/AddNumbersHandlerService.AddNumbersHandlerPortTypeImplPort";
+    String invalidAxisEndpoint = "http://rfc2606.invalid:6060/axis2/services/AddNumbersHandlerService.AddNumbersHandlerPortTypeImplPort";
 
     static File requestFile = null;
     static {
@@ -130,12 +133,7 @@ public class AddNumbersHandlerTests {
             assertEquals("With handler manipulation, total should be 3 less than a proper sumation.", 17, total);
             TestLogger.logger.debug("Total (after handler manipulation) = " + total);
             
-            // also confirm that @PreDestroy method is called.  Since it only makes sense to call it on the managed
-            // (server) side and just before the handler instance goes out of scope, we are creating a file in the
-            // @PreDestroy method, and will check for its existance here.  If the file does not exist, it means
-            // @PreDestroy method was never called.  The file is set to .deleteOnExit(), so no need to delete it.
-            File file = new File("AddNumbersProtocolHandler.preDestroy.txt");
-            assertTrue("File AddNumbersProtocolHandler.preDestroy.txt does not exist, meaning the @PreDestroy method was not called.", file.exists());
+            assertTrue("@PreDestroy method was not called.", AddNumbersProtocolHandler.getAndResetPredestroyCalled());
 
             String log = readLogFile();
             String expected_calls =
@@ -214,12 +212,7 @@ public class AddNumbersHandlerTests {
                         "but the exception is: " + t);
         }
        
-        // also confirm that @PreDestroy method is called.  Since it only makes sense to call it on the managed
-        // (server) side and just before the handler instance goes out of scope, we are creating a file in the
-        // @PreDestroy method, and will check for its existance here.  If the file does not exist, it means
-        // @PreDestroy method was never called.  The file is set to .deleteOnExit(), so no need to delete it.
-        File file = new File("AddNumbersProtocolHandler.preDestroy.txt");
-        assertTrue("File AddNumbersProtocolHandler.preDestroy.txt does not exist, meaning the @PreDestroy method was not called.", file.exists());
+        assertTrue("@PreDestroy method was not called.", AddNumbersProtocolHandler.getAndResetPredestroyCalled());
 
         String log = readLogFile();
         String expected_calls =
@@ -308,12 +301,7 @@ public class AddNumbersHandlerTests {
                         "but the exception is: " + t);
         }
        
-        // also confirm that @PreDestroy method is called.  Since it only makes sense to call it on the managed
-        // (server) side and just before the handler instance goes out of scope, we are creating a file in the
-        // @PreDestroy method, and will check for its existance here.  If the file does not exist, it means
-        // @PreDestroy method was never called.  The file is set to .deleteOnExit(), so no need to delete it.
-        File file = new File("AddNumbersProtocolHandler.preDestroy.txt");
-        assertTrue("File AddNumbersProtocolHandler.preDestroy.txt does not exist, meaning the @PreDestroy method was not called.", file.exists());
+        assertTrue("@PreDestroy method was not called.", AddNumbersProtocolHandler.getAndResetPredestroyCalled());
 
         String log = readLogFile();
         String expected_calls =
@@ -866,7 +854,7 @@ public class AddNumbersHandlerTests {
      * handleFault() methods are driven.  This is the default behavior.
      */
     @Test
-    public void testAddNumbersClientHandlerWithLocalException() {
+    public void testAddNumbersClientHandlerWithLocalException() throws Exception {
         try{
             TestLogger.logger.debug("----------------------------------");
             
@@ -889,10 +877,9 @@ public class AddNumbersHandlerTests {
             int total = proxy.addNumbersHandler(1,2);
             
             fail("Should have got an exception, but we didn't.");
-        } catch(Exception e) {
-            assertTrue("Exception should be SOAPFaultException. Found " +e.getClass() + " "+ e.getMessage(), e instanceof SOAPFaultException);
+        } catch (SOAPFaultException e) {
             SOAPFault soapFault = ((SOAPFaultException) e).getFault();
-            assertTrue("Cause should be instanceof UnknownHostException", (e.getCause() instanceof java.net.UnknownHostException));
+            assertThat(e.getCause()).isInstanceOf(UnknownHostException.class);
             
             String log = readLogFile();
             String expected_calls = "AddNumbersClientLogicalHandler4 HANDLE_MESSAGE_OUTBOUND\n"
@@ -942,7 +929,7 @@ public class AddNumbersHandlerTests {
         } catch(Exception e) {
             assertTrue("Exception should be WebServiceException.", e instanceof WebServiceException);
             assertFalse("Exception should not be SOAPFaultException.", e instanceof SOAPFaultException);
-            assertTrue("Cause should be instanceof UnknownHostException", (e.getCause() instanceof java.net.UnknownHostException));
+            assertTrue("Cause should be instanceof UnknownHostException", (e.getCause() instanceof UnknownHostException));
             
             String log = readLogFile();
             String expected_calls = "AddNumbersClientLogicalHandler4 HANDLE_MESSAGE_OUTBOUND\n"

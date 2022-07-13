@@ -104,7 +104,7 @@
         <rhino.version>1.6R7</rhino.version>
         <servlet.api.version>2.3</servlet.api.version>
   <<<<<<< dependabot/maven/modules/parent/org.springframework-spring-beans-5.2.21.RELEASE
-        <spring.version>5.2.21.RELEASE</spring.version>
+        <spring.version>5.2.22.RELEASE</spring.version>
   =======
         <spring.version>5.2.22.RELEASE</spring.version>
   >>>>>>> 1_5
